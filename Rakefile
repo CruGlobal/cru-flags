@@ -14,6 +14,6 @@ end
 # cru-flags/vX.Y.Z. So "release" is only build + gem push.
 Rake::Task["release"].clear
 desc "Build the gem and push it to rubygems.org (tagging belongs to release-please)"
-task release: %w[build release:rubygems_push]
+task release: %w[build release:rubygem_push]
 
 task default: %i[standard test]
