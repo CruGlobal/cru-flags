@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/CruGlobal/cru-flags-ruby/compare/cru-flags/v0.1.1...cru-flags/v0.1.2) (2026-08-24)
+
+
+### Bug Fixes
+
+* gem "cru-flags" with no require: now actually loads the gem ([#9](https://github.com/CruGlobal/cru-flags-ruby/issues/9)) ([05ce44c](https://github.com/CruGlobal/cru-flags-ruby/commit/05ce44c1b68673487d07d669e96f191c701658d7))
+
 ## [0.1.1](https://github.com/CruGlobal/cru-flags-ruby/compare/cru-flags/v0.1.0...cru-flags/v0.1.1) (2026-08-24)
 
 
