@@ -11,5 +11,3 @@
 ### Miscellaneous Chores
 
 * release 0.1.0 ([2ed0e67](https://github.com/CruGlobal/cru-flags-ruby/commit/2ed0e67e0ce0441d80ba8d1dc6559a9d8995de17))
-
-## Changelog

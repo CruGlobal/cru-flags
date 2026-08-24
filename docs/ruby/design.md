@@ -317,8 +317,15 @@ that, in an initializer:
   so the value is always already set when we look. Instead the Railtie sets
   `config.flipper.strict = false` only when `ENV["FLIPPER_STRICT"].nil?` AND
   the current value equals Flipper's own computed default for this Rails env —
-  i.e. only when we can prove nobody chose it. `FLIPPER_STRICT=warn` (or any
-  app-set value) is always honored. Rationale: local dev and brand-new
+  i.e. only when we cannot tell that anybody chose it. `FLIPPER_STRICT` is
+  always honored when set. An app-set `config.flipper.strict` is honored too,
+  **except when it happens to equal the environment's own flipper default**
+  (`:warn` in development, `false` elsewhere) — that case is
+  indistinguishable from nobody setting it, and is quieted. Reading the value
+  is the only signal available; distinguishing it would mean hooking the
+  assignment itself, which is not worth the coupling for a case whose
+  observable effect is the value the app asked for anyway in every
+  environment but development. Rationale: local dev and brand-new
   projects legitimately have no flag document, and `Flipper.add` is never
   called by app code (flags are born in the service), so dev-mode `:warn`
   would fire on every check.
@@ -421,17 +428,26 @@ One tick:
 1. Build a `Net::HTTP::Get` with `Accept: application/json`, a `User-Agent`
    of `cru-flags-ruby/<version>`, and `If-None-Match: <etag>` when an ETag is
    stored.
-2. One-shot `Net::HTTP.start(host, port, use_ssl:, open_timeout: t,
+2. One-shot `Net::HTTP.start(hostname, port, use_ssl:, open_timeout: t,
    read_timeout: t, write_timeout: t)` — no keep-alive, no connection
-   pooling; the right trade for one request per 30 seconds. **No retries
-   within a tick** — the next tick is the retry. Redirects are followed to a
+   pooling; the right trade for one request per 30 seconds. `URI#hostname`,
+   not `URI#host`: the latter keeps the brackets an IPv6 literal carries in
+   a URL (`[::1]`), which `getaddrinfo` cannot resolve. **No retries
+   within a tick** — the next tick is the retry, and Net::HTTP's own
+   `max_retries` (default 1) is set to 0 explicitly, since its default would
+   silently re-issue the failed GET inside the same tick. Redirects are followed to a
    fixed limit of **3** (Net::HTTP does not follow them itself; the siblings
    inherit auto-follow from `fetch`/`urllib`). Ruby-first hardening the
    siblings may want to adopt: each redirect hop's merged URI is
    re-validated (http/https scheme, non-empty host) before it is followed,
-   and the response body is capped at `MAX_BODY_BYTES` (1 MiB) before
-   parsing, both failing the tick rather than handing an attacker-controlled
-   value to `Net::HTTP` or `JSON.parse`.
+   and the response body is capped at `MAX_BODY_BYTES` (1 MiB) **as it
+   streams** — read chunk by chunk with a running byte count, ending the
+   read the moment the cap is passed — so an oversized or endless body never
+   reaches the heap whole. A `200` that overruns fails the tick (a truncated
+   document must never be parsed); on any other status the body is only ever
+   an excerpt or unused, so the overrun just ends the read and the status's
+   own outcome stands. Both guards fail the tick rather than handing an
+   attacker-controlled value to `Net::HTTP` or `JSON.parse`.
 3. Outcomes:
 
    | Outcome | Action | Health |
@@ -504,11 +520,19 @@ re-running the suite on 3.2 / 3.3 / 3.4.
   path derivation turns the hyphenated name into `lib/cru/flags/version.rb`
   and would silently bump a file that doesn't exist).
 - `required_ruby_version = ">= 3.2"` — the fleet floor.
-- Runtime dependency: **`flipper` (`~> 1.4`) only.** The client core uses
-  stdlib exclusively; the Flipper adapter and Railtie are the gem's reason to
-  have its one dependency, and every consumer already carries it. (If a
-  flipper-less consumer ever appears, splitting a zero-dep core gem out is a
-  follow-up, not a v0 concern.)
+- Runtime dependencies: **`flipper` (`~> 1.4`), plus a floor on the stdlib
+  gem `json` (`>= 2.4`).** The client core uses stdlib exclusively; the
+  Flipper adapter and Railtie are the gem's reason to have `flipper`, and
+  every consumer already carries it. (If a flipper-less consumer ever
+  appears, splitting a zero-dep core gem out is a follow-up, not a v0
+  concern.) The `json` entry is a **version floor on a default gem, not a
+  new dependency** — but it must not be removed: `JSON.parse(..., freeze:
+  true)` is what makes the published document deep-frozen, and json below
+  2.4 **silently ignores** `freeze:` rather than erroring. On an older json
+  the snapshot would quietly become mutable and §6's frozen-snapshot
+  invariant — the whole reason readers can dig into the live document
+  without a lock — would be false with no symptom until something mutated
+  it.
 - Publishing via **RubyGems Trusted Publishing** (OIDC) from
   `.github/workflows/release.yml` — the PyPI pattern; no API key in the
   repo. First publish uses RubyGems' pending-publisher flow since the gem

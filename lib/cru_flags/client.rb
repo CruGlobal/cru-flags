@@ -11,13 +11,23 @@ module CruFlags
     VALID_SCHEMES = %w[http https].freeze
     MODES = %w[background on-demand].freeze
 
+    # The one place CRU_FLAGS_URL is read and normalized (design doc §3:
+    # `url: nil` means "read CRU_FLAGS_URL on first use"). It lives on the
+    # Client, not on the module singleton, so a directly-constructed Client
+    # honors the documented contract instead of being silently inert; the
+    # module singleton gets the same normalization by construction.
+    def self.url_from_env
+      value = ENV[ENV_VAR].to_s.strip
+      value.empty? ? nil : value
+    end
+
     def initialize(url: nil, poll_seconds: 30.0, fetch_timeout: 2.0,
       on_error: nil, refresh_mode: nil)
       @poll_seconds = positive(poll_seconds, 30.0)
       @fetch_timeout = positive(fetch_timeout, 2.0)
       @on_error = on_error || default_on_error
       @refresh_mode = resolve_mode(refresh_mode)
-      @url = url
+      @url = url || self.class.url_from_env
       @document = nil
       @etag = nil
       @healthy = true
@@ -294,7 +304,9 @@ module CruFlags
       return if @url.nil?
       uri = URI(@url.to_s)
       invalid_scheme = !VALID_SCHEMES.include?(uri.scheme)
-      no_host = uri.host.to_s.empty?
+      # hostname, matching the fetcher: the unbracketed form is what actually
+      # gets resolved, so it is what "has a host" must be judged on.
+      no_host = uri.hostname.to_s.empty?
       if invalid_scheme || no_host
         reason = invalid_scheme ? "scheme #{uri.scheme.inspect} is not http(s)" : "has no host"
         @url = nil

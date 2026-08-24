@@ -19,6 +19,10 @@ class RailtieLogicTest < Minitest::Test
     CruFlags::Railtie.quiet_strict?(current:, env_var:, rails_env:)
   end
 
+  # Also the documented indistinguishable case (design doc §5.1): an app that
+  # explicitly sets config.flipper.strict = :warn in development is setting
+  # the value flipper already defaulted to, which reads identically to
+  # setting nothing, so it gets quieted too.
   def test_quiets_flippers_own_dev_default
     assert quiet?(current: :warn)
   end

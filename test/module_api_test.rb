@@ -6,6 +6,7 @@ require "cru_flags"
 
 class ModuleApiTest < Minitest::Test
   def setup
+    CruFlags.reset!
     @service = FlagService.new.start
     @service.respond_with(status: 200, body: '{"Flags":{"pilot":{"Enabled":true}}}')
   end
@@ -32,6 +33,19 @@ class ModuleApiTest < Minitest::Test
   def test_whitespace_env_counts_as_unset
     ENV["CRU_FLAGS_URL"] = "   "
     refute CruFlags.enabled?("pilot")
+  end
+
+  # close going through the memoizing reader would BUILD the singleton just
+  # to close it, leaving a permanently-closed client memoized: every later
+  # read answers false and ready never becomes true, in a correctly
+  # configured app, because something called close at shutdown.
+  def test_close_on_an_unbuilt_singleton_does_not_build_one
+    ENV["CRU_FLAGS_URL"] = @service.url
+    CruFlags.close
+    assert_nil CruFlags.instance_variable_get(:@client),
+      "close must not construct the singleton it was asked to close"
+    assert CruFlags.ready(timeout: 2.0), "the singleton must still be usable after a no-op close"
+    assert CruFlags.enabled?("pilot")
   end
 
   def test_singleton_is_memoized_and_reset_discards_it

@@ -17,8 +17,11 @@ module CruFlags
   @flipper_adapter = nil
 
   class << self
+    # The env read happens inside Client (Client.url_from_env), so the
+    # singleton and a hand-rolled `Client.new` share one normalization
+    # rather than two copies that can drift.
     def client
-      @client || @client_mutex.synchronize { @client ||= Client.new(url: url_from_env) }
+      @client || @client_mutex.synchronize { @client ||= Client.new }
     end
 
     def enabled?(name) = client.enabled?(name)
@@ -29,7 +32,11 @@ module CruFlags
 
     def refresh(force: false) = client.refresh(force:)
 
-    def close = client.close
+    # Nil-safe on the ivar, like reset!: going through the memoizing reader
+    # would BUILD (and validate) a singleton just to close it, leaving a
+    # permanently-closed client memoized — and emitting the invalid-URL
+    # warning at shutdown for an app that never used flags at all.
+    def close = @client&.close
 
     # The read-only Flipper adapter (design doc §5), memoized and bound to
     # the singleton client. `flipper` is required lazily here (not at the
@@ -51,13 +58,6 @@ module CruFlags
         @client = nil
       end
       @flipper_adapter_mutex.synchronize { @flipper_adapter = nil }
-    end
-
-    private
-
-    def url_from_env
-      value = ENV[ENV_VAR].to_s.strip
-      value.empty? ? nil : value
     end
   end
 end

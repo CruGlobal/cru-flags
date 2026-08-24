@@ -8,7 +8,9 @@ require "json"
 # Concurrency guarantees that only surface under real contention: readers
 # racing a fast-swapping poller must never observe a half-applied document
 # (design doc §6 — documents are deep-frozen and swapped by single reference
-# assignment, never mutated in place). Plus two jitter checks (design doc
+# assignment, never mutated in place). Design doc §9 asks specifically for a
+# hammer on `enabled?` across snapshot swaps, so the reader pool drives both
+# it and `snapshot`. Plus two jitter checks (design doc
 # §7's ±20% de-phasing band): an honestly-labeled Ruby-RNG sanity bound, and
 # a source-derived pin on the poller's actual jitter formula (the sanity
 # bound alone never calls into the client, so it can't fail if the formula
@@ -26,21 +28,44 @@ class ConcurrencyTest < Minitest::Test
     client.ready(timeout: 2.0)
     stop = false
     violations = []
-    readers = 8.times.map do
+    # Bounded: these loops run millions of iterations in a second, so an
+    # unbounded record turns one real regression into a multi-megabyte
+    # failure message. The first few examples are all a diagnosis needs.
+    record = ->(v) { violations << v if violations.size < 10 }
+    # Half the readers go through snapshot (one deep copy, so the two flags
+    # it compares come from the same document) and half through enabled?,
+    # the lock-free dig straight into the live frozen document — the read
+    # path §9 actually promises to hammer, and the only one that touches the
+    # swapped reference with no copy in between. Two enabled? calls straddle
+    # a swap legitimately, so what it can assert is what the contract
+    # promises: it never raises, and it answers strictly true or false —
+    # never nil, never a fragment of a half-applied document.
+    readers = 8.times.map do |i|
       Thread.new do
         until stop
-          snap = client.snapshot
-          next if snap.empty?
-          a = snap.dig("Flags", "a", "Enabled")
-          b = snap.dig("Flags", "b", "Enabled")
-          violations << snap if a != b # the two docs always agree internally
+          begin
+            if i.even?
+              snap = client.snapshot
+              next if snap.empty?
+              a = snap.dig("Flags", "a", "Enabled")
+              b = snap.dig("Flags", "b", "Enabled")
+              record.call(snap) if a != b # the two docs always agree internally
+            else
+              %w[a b missing].each do |name|
+                value = client.enabled?(name)
+                record.call([name, value]) unless value == true || value == false
+              end
+            end
+          rescue => e
+            record.call(e) # enabled?/snapshot never raise, contention included
+          end
         end
       end
     end
     sleep 1.0
     stop = true
     readers.each(&:join)
-    assert_empty violations, "a reader observed a torn document"
+    assert_empty violations, "a reader observed a torn document (or raised)"
   ensure
     client&.close
     service&.stop

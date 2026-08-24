@@ -22,7 +22,10 @@ module CruFlags
     # (:warn in development, false elsewhere) — BEFORE any gem initializer —
     # so "did the app set it" cannot be read off the config value alone. We
     # quiet strict only when the env var is unset AND the value still equals
-    # Flipper's own computed default, i.e. only when nobody chose it.
+    # Flipper's own computed default. An app that explicitly sets the value
+    # its environment already defaults to is therefore indistinguishable
+    # from an app that set nothing, and gets quieted; the value is the only
+    # signal available without hooking the assignment (design doc §5.1).
     def self.quiet_strict?(current:, env_var:, rails_env:)
       return false unless env_var.nil?
       flipper_default = (rails_env == "development") ? :warn : false

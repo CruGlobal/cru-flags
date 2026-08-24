@@ -151,6 +151,53 @@ class ClientCoreTest < Minitest::Test
     client.close
   end
 
+  # Design doc §3 documents the constructor as `url: nil -> read
+  # CRU_FLAGS_URL on first use`. A directly-constructed Client that ignored
+  # the env var would be permanently inert with no signal at all: every flag
+  # silently false in an app that is configured correctly.
+  def test_nil_url_falls_back_to_the_env_var
+    ENV["CRU_FLAGS_URL"] = @service.url
+    @service.respond_with(status: 200, body: '{"Flags":{"pilot":{"Enabled":true}}}')
+    client = CruFlags::Client.new(url: nil, on_error: ->(e) { @errors << e })
+    refute_predicate client, :inert?
+    assert client.ready(timeout: 2.0)
+    assert client.enabled?("pilot")
+    client.close
+  ensure
+    ENV.delete("CRU_FLAGS_URL")
+  end
+
+  def test_nil_url_with_unset_env_stays_inert
+    ENV.delete("CRU_FLAGS_URL")
+    client = CruFlags::Client.new(url: nil, on_error: ->(e) { @errors << e })
+    assert_predicate client, :inert?
+    refute client.enabled?("pilot")
+    assert_empty @errors, "an unset env var is normal, not an error"
+    client.close
+  end
+
+  def test_nil_url_with_whitespace_only_env_stays_inert
+    ENV["CRU_FLAGS_URL"] = "   "
+    client = CruFlags::Client.new(url: nil, on_error: ->(e) { @errors << e })
+    assert_predicate client, :inert?
+    client.close
+  ensure
+    ENV.delete("CRU_FLAGS_URL")
+  end
+
+  # An explicit url: wins over the environment, so a caller that constructs
+  # its own Client can still point it somewhere else.
+  def test_explicit_url_wins_over_the_env_var
+    ENV["CRU_FLAGS_URL"] = "http://127.0.0.1:1/never"
+    client = CruFlags::Client.new(url: @service.url, on_error: ->(e) { @errors << e })
+    serve('{"Flags":{"pilot":{"Enabled":true}}}')
+    assert client.refresh(force: true)
+    assert client.enabled?("pilot")
+    client.close
+  ensure
+    ENV.delete("CRU_FLAGS_URL")
+  end
+
   def test_broken_on_error_handler_is_swallowed
     client = CruFlags::Client.new(url: @service.url, on_error: ->(_e) { raise "handler bug" })
     @service.respond_with(status: 500, body: "x")
