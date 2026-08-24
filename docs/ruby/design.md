@@ -42,7 +42,7 @@ underneath it. What it replaces, and why, is §4.
   requests (§7.1) — included for contract parity with the siblings.
 - **Fail-static** semantics: a flag lookup never raises, never blocks (in
   background mode), and never changes answer because the network broke.
-- A read-only `Flipper::Adapters::CruFlags` over the snapshot, plus a Railtie
+- A read-only `CruFlags::FlipperAdapter` over the snapshot, plus a Railtie
   that wires it into Flipper with zero app code.
 - Stdlib-only client core (`net/http`, `json`, `thread`); Ruby >= 3.2.
 
@@ -221,7 +221,10 @@ fatal.**
 
 1. **`enabled?` performs no I/O** in the default background mode: one ivar
    read and two Hash lookups. No lock on the read path, so a slow network can
-   never become a slow request.
+   never become a slow request. It also performs the fork/liveness guard (a
+   `Process.pid` check plus `Thread#alive?`) that lazily re-arms a dead or
+   post-fork poller, still lock-free and network-free — the guard only takes
+   a lock on the (rare) path where it actually needs to respawn.
 2. **All flags are `false` until the first successful fetch.** A flag guards
    *new* behaviour; the safe answer while ignorant is the old behaviour.
 3. **Last-known-good persists indefinitely. There is no TTL.** This is the
@@ -265,7 +268,7 @@ verified live in the recon):
 
 ## 5. The Flipper adapter
 
-`Flipper::Adapters::CruFlags` — a read-only adapter over the client's frozen
+`CruFlags::FlipperAdapter` — a read-only adapter over the client's frozen
 snapshot, so every existing `Flipper.enabled?(:name)` call site works
 unchanged.
 
@@ -423,7 +426,12 @@ One tick:
    pooling; the right trade for one request per 30 seconds. **No retries
    within a tick** — the next tick is the retry. Redirects are followed to a
    fixed limit of **3** (Net::HTTP does not follow them itself; the siblings
-   inherit auto-follow from `fetch`/`urllib`).
+   inherit auto-follow from `fetch`/`urllib`). Ruby-first hardening the
+   siblings may want to adopt: each redirect hop's merged URI is
+   re-validated (http/https scheme, non-empty host) before it is followed,
+   and the response body is capped at `MAX_BODY_BYTES` (1 MiB) before
+   parsing, both failing the tick rather than handing an attacker-controlled
+   value to `Net::HTTP` or `JSON.parse`.
 3. Outcomes:
 
    | Outcome | Action | Health |
