@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require_relative "support/flag_service"
+require "timeout"
 require "cru_flags"
 
 class ClientOnDemandTest < Minitest::Test
@@ -20,10 +21,17 @@ class ClientOnDemandTest < Minitest::Test
   end
 
   def test_no_thread_ever_and_first_read_fetches
+    # net/http wraps its TCP connect in Timeout.timeout whenever TCPSocket
+    # lacks open_timeout: support (true for the stdlib default net-http), and
+    # the timeout library spawns its process-global "Timeout stdlib thread" on
+    # first use. Warm that lazy singleton so the count below measures OUR
+    # client and not whichever test happened to touch Timeout first.
+    Timeout.timeout(1) { 1 }
     before = Thread.list.size
     client = new_client
     assert client.enabled?("pilot"), "first read performs the fetch"
     assert_equal before, Thread.list.size
+    assert(Thread.list.none? { |t| t.name == "cru-flags-poller" })
   end
 
   def test_reads_within_interval_do_not_refetch
