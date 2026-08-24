@@ -2,8 +2,13 @@ name: Release
 on:
   push:
     branches: [main]
+  # Manual publish for a release that tagged but failed to publish — a
+  # re-run of the failed job checks out the original commit and cannot see
+  # fixes. Publishing an already-published version fails loudly at rubygems.
+  workflow_dispatch:
 jobs:
   release-please:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -15,7 +20,7 @@ jobs:
         uses: googleapis/release-please-action@v4
   publish:
     needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
