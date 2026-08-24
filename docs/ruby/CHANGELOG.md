@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/CruGlobal/cru-flags-ruby/compare/cru-flags/v0.1.0...cru-flags/v0.1.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* single-attempt fetches, Client env fallback, streaming body cap, IPv6 hosts ([#7](https://github.com/CruGlobal/cru-flags-ruby/issues/7)) ([f0710b1](https://github.com/CruGlobal/cru-flags-ruby/commit/f0710b1e0ea79ef9e6ee44be972834575127173c))
+
 ## 0.1.0 (2026-08-24)
 
 
