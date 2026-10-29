@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/CruGlobal/cru-flags-ruby/compare/cru-flags/v0.1.2...cru-flags/v0.2.0) (2026-10-29)
+
+
+### Features
+
+* keep a fallback copy of the flag document in Rails.cache ([#12](https://github.com/CruGlobal/cru-flags-ruby/issues/12)) ([cf03f02](https://github.com/CruGlobal/cru-flags-ruby/commit/cf03f02adf998774ae1b258af5685ddb668140d5))
+
 ## [0.1.2](https://github.com/CruGlobal/cru-flags-ruby/compare/cru-flags/v0.1.1...cru-flags/v0.1.2) (2026-08-24)
 
 
