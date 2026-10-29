@@ -48,6 +48,67 @@ class ModuleApiTest < Minitest::Test
     assert CruFlags.enabled?("pilot")
   end
 
+  def test_the_singleton_saves_to_the_configured_fallback_store
+    store = Class.new {
+      attr_reader :data
+      def initialize = @data = {}
+      def read(key) = @data[key]
+      def write(key, value, **) = @data[key] = value
+    }.new
+    CruFlags.default_fallback_store = -> { store }
+    ENV["CRU_FLAGS_URL"] = @service.url
+    assert CruFlags.ready(timeout: 2.0)
+    assert_includes store.data.fetch("cru_flags/v1/#{@service.url}"), "pilot"
+  ensure
+    CruFlags.default_fallback_store = nil
+  end
+
+  def test_an_assignment_beats_the_default_in_either_order
+    default = Object.new
+    CruFlags.fallback_store = nil
+    CruFlags.default_fallback_store = -> { default }
+    assert_nil CruFlags.fallback_store
+    CruFlags.reset!
+    assert_same default, CruFlags.fallback_store
+    other = Object.new
+    CruFlags.fallback_store = other
+    assert_same other, CruFlags.fallback_store
+  ensure
+    CruFlags.default_fallback_store = nil
+  end
+
+  def test_the_module_setter_takes_a_proc_like_client_new_does
+    store = Class.new {
+      attr_reader :data
+      def initialize = @data = {}
+      def read(key) = @data[key]
+      def write(key, value, **) = @data[key] = value
+    }.new
+    CruFlags.fallback_store = -> { store }
+    assert_same store, CruFlags.fallback_store
+    ENV["CRU_FLAGS_URL"] = @service.url
+    assert CruFlags.ready(timeout: 2.0)
+    assert_includes store.data.fetch("cru_flags/v1/#{@service.url}"), "pilot"
+  end
+
+  def test_a_singleton_built_before_the_assignment_still_follows_it
+    store = Class.new {
+      attr_reader :writes
+      def initialize = @writes = 0
+      def read(_) = nil
+      def write(*, **) = @writes += 1
+    }.new
+    CruFlags.default_fallback_store = -> { store }
+    ENV["CRU_FLAGS_URL"] = @service.url
+    CruFlags.client # built while the default applies
+    CruFlags.fallback_store = nil
+    assert CruFlags.ready(timeout: 2.0)
+    CruFlags.refresh(force: true)
+    assert_equal 0, store.writes
+  ensure
+    CruFlags.default_fallback_store = nil
+  end
+
   def test_singleton_is_memoized_and_reset_discards_it
     ENV["CRU_FLAGS_URL"] = @service.url
     first = CruFlags.client

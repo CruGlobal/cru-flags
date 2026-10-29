@@ -32,4 +32,10 @@ until the first successful fetch; after that, an outage means flags stop
 changing — never that they turn off. Reads never raise and never do I/O.
 Health transitions (and only transitions) are logged.
 
+In Rails, the client also keeps a copy of the last good document in
+`Rails.cache` (no expiry). A process that boots while the flag service is down
+serves that copy instead of every flag off. To opt out, set
+`CruFlags.fallback_store = nil` anywhere in your app's config (application,
+environment file, or initializer).
+
 CRuby >= 3.2 only. See [docs/design.md](docs/design.md) for everything else.

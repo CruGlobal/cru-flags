@@ -41,5 +41,12 @@ module CruFlags
         app.config.flipper.strict = false
       end
     end
+
+    # A default, not an assignment: CruFlags.fallback_store set anywhere
+    # (application.rb, an environment file, an initializer), before or after
+    # this runs, wins. Rails.cache is looked up on each use.
+    initializer "cru_flags.fallback_store" do
+      CruFlags.default_fallback_store = -> { Rails.cache }
+    end
   end
 end

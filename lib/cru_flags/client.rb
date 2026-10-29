@@ -22,12 +22,13 @@ module CruFlags
     end
 
     def initialize(url: nil, poll_seconds: 30.0, fetch_timeout: 2.0,
-      on_error: nil, refresh_mode: nil)
+      on_error: nil, refresh_mode: nil, fallback_store: nil)
       @poll_seconds = positive(poll_seconds, 30.0)
       @fetch_timeout = positive(fetch_timeout, 2.0)
       @on_error = on_error || default_on_error
       @refresh_mode = resolve_mode(refresh_mode)
       @url = url || self.class.url_from_env
+      @fallback_store = fallback_store
       @document = nil
       @etag = nil
       @healthy = true
@@ -268,9 +269,37 @@ module CruFlags
         became(healthy: true)
       when :failed
         became(healthy: false, error: outcome.error)
+        restore_fallback if @document.nil?
       end
       @last_attempt_ok = outcome.kind != :failed
+      save_fallback if @last_attempt_ok
     end
+
+    # Design doc §6.1. Runs inside attempt_fetch, never on enabled?'s
+    # background-mode read path, and never raises.
+    def save_fallback
+      store = fallback_store or return
+      # expires_in: nil overrides any store-wide default TTL: a copy that
+      # expires is the TTL cliff §4 rules out.
+      store.write(fallback_key, JSON.generate(@document), expires_in: nil)
+    rescue
+      nil
+    end
+
+    # Only for a process that has never held a document.
+    def restore_fallback
+      store = fallback_store or return
+      body = store.read(fallback_key)
+      @document = Document.parse(body) if body.is_a?(String)
+    rescue
+      nil
+    end
+
+    def fallback_store
+      @fallback_store.is_a?(Proc) ? @fallback_store.call : @fallback_store
+    end
+
+    def fallback_key = "cru_flags/v1/#{@url}"
 
     def became(healthy:, error: nil)
       return if healthy == @healthy

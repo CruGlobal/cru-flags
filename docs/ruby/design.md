@@ -44,6 +44,9 @@ underneath it. What it replaces, and why, is §4.
   background mode), and never changes answer because the network broke.
 - A read-only `CruFlags::FlipperAdapter` over the snapshot, plus a Railtie
   that wires it into Flipper with zero app code.
+- An optional cross-process **fallback copy** of the last good document
+  (`Rails.cache` by default in Rails), read only by a process that boots
+  while the service is down (§6.1).
 - Stdlib-only client core (`net/http`, `json`, `thread`); Ruby >= 3.2.
 
 ### Out of scope
@@ -66,9 +69,11 @@ underneath it. What it replaces, and why, is §4.
 - We do **not** raise on misconfiguration. An application missing
   `CRU_FLAGS_URL` must still boot and serve traffic, with every flag off —
   exactly ararat's current Memory-adapter fallback posture.
-- We do **not** cache in `Rails.cache`. The snapshot is process-local memory;
-  there is no TTL, no Marshal round-trip, and therefore no TTL cliff and no
-  default_proc trap (§4).
+- We do **not** read flags through `Rails.cache`. The snapshot is
+  process-local memory; there is no TTL, no Marshal round-trip, and therefore
+  no TTL cliff and no default_proc trap (§4). The §6.1 fallback copy is not a
+  read-through cache: it is written with no expiry, stored as a JSON string,
+  and read only by a process that has no snapshot at all.
 
 ---
 
@@ -134,8 +139,12 @@ CruFlags::Client.new(
   poll_seconds: 30.0,  # refresh interval, ±20% jitter
   fetch_timeout: 2.0,  # per-request open AND read timeout
   on_error: nil,       # nil -> log to the "cru_flags" logger (§3.6)
-  refresh_mode: nil    # nil -> read CRU_FLAGS_REFRESH_MODE, else "background"
+  refresh_mode: nil,   # nil -> read CRU_FLAGS_REFRESH_MODE, else "background"
+  fallback_store: nil  # nil -> no fallback copy; a store, or a Proc returning one (§6.1)
 )
+
+CruFlags.fallback_store = nil              # opt out; set anywhere in app config
+CruFlags.fallback_store = -> { Rails.cache }  # a store, or a Proc returning one
 ```
 
 ### 3.1 `CruFlags` module methods
@@ -145,6 +154,15 @@ The module methods delegate to a lazily-constructed process-wide
 module-level `flags`. Requiring the gem does **nothing**: no environment
 read, no socket, no thread (§7). The singleton is constructed on first use,
 so tests and dotenv can set `CRU_FLAGS_URL` any time before the first lookup.
+The singleton resolves `CruFlags.fallback_store` on every use, not once at
+construction (§6.1): an explicit assignment (nil included) if there was one,
+else `CruFlags.default_fallback_store`, the Railtie's `-> { Rails.cache }`. A
+Proc is called on each use. That matters in `config/application.rb` and
+environment files, where `Rails.cache` is still nil (Bootstrap has not built
+it yet): a bare `Rails.cache` there assigns nil and turns the fallback off,
+while `-> { Rails.cache }` works anywhere. `default_fallback_store=` belongs
+to the Railtie, which overwrites it unconditionally; apps use
+`fallback_store=`.
 
 ### 3.2 `enabled?(name) -> bool`
 
@@ -156,24 +174,26 @@ Symbol; Symbols are converted with `to_s` (the document's keys are strings;
 Flipper call sites pass symbols).
 
 Unknown flag, unset flag, no document yet, no `CRU_FLAGS_URL`, service down
-before the first success — all `false`.
+before the first success with no fallback copy (§6.1) — all `false`.
 
 ### 3.3 `ready(timeout: nil) -> bool`
 
 Blocks until the **first fetch attempt completes** — success *or* failure —
 and returns whether it completed within `timeout`. Returns `true` after a
-failed first attempt (the attempt did complete, and "all off" is the final
-answer until the next poll). Returns `false` immediately, without blocking,
+failed first attempt (the attempt did complete, and its answer stands until
+the next poll: all off, or the §6.1 fallback copy). Returns `false` immediately, without blocking,
 when the client is inert (no URL) — there is no attempt to wait for and never
 will be. In on-demand mode `ready` *performs* the first attempt like any
 other read, so `timeout:` is unused there — the call is bounded by the fetch
 timeouts (up to ~2s by default) regardless of a smaller `timeout:` value,
-exactly as the python client documents. Never raises.
+exactly as the python client documents. With a `fallback_store`, the attempt
+also includes at most one store call (§6.1), bounded by the store's own timeouts.
+Never raises.
 
 ### 3.4 `snapshot -> Hash`
 
 A plain, deep-copied, JSON-serializable Hash of the last document received
-(`{}` before the first success). `JSON.generate(CruFlags.snapshot)`
+(`{}` before the first success, unless a §6.1 fallback copy was restored). `JSON.generate(CruFlags.snapshot)`
 round-trips to exactly what the service sent. The copy exists so a caller
 cannot mutate library state; the internally stored snapshot is genuinely
 frozen (§6).
@@ -183,7 +203,8 @@ frozen (§6).
 Fetches on the *calling* thread and returns whether the snapshot is fresh (an
 attempt has completed and the most recent one succeeded). Without `force` it
 is a no-op while the last attempt is younger than `poll_seconds`. Blocks for
-at most the fetch timeouts. Never raises. This is the refresh primitive in
+at most the fetch timeouts, plus one fallback-store call when one is
+configured (§6.1). Never raises. This is the refresh primitive in
 on-demand mode, and an out-of-band poke in background mode — where, per the
 Node contract, concurrent `refresh` calls and a concurrent poller tick all
 **share one in-flight request** rather than stacking simultaneous fetches.
@@ -226,7 +247,10 @@ fatal.**
    post-fork poller, still lock-free and network-free — the guard only takes
    a lock on the (rare) path where it actually needs to respawn.
 2. **All flags are `false` until the first successful fetch.** A flag guards
-   *new* behaviour; the safe answer while ignorant is the old behaviour.
+   *new* behaviour; the safe answer while ignorant is the old behaviour. The
+   one exception is §6.1: a process whose first fetch fails serves the
+   fleet's last good copy if one exists, because a flag that is already on
+   for every other process is no longer "new" to the users of this one.
 3. **Last-known-good persists indefinitely. There is no TTL.** This is the
    failure-mode semantic §6 of the fleet's original flags design doc (the
    Google-Doc-era spec, snapshotted as cru-flags-design-doc.md) promised and
@@ -329,6 +353,13 @@ that, in an initializer:
   projects legitimately have no flag document, and `Flipper.add` is never
   called by app code (flags are born in the service), so dev-mode `:warn`
   would fire on every check.
+- in a second initializer, sets `CruFlags.default_fallback_store =
+  -> { Rails.cache }` (§6.1). It is a default, not an assignment: a
+  `CruFlags.fallback_store =` anywhere in the app (`config/application.rb`
+  and environment files run *before* Railtie initializers,
+  `config/initializers` after) wins whatever the order, nil included. Both
+  are resolved on each use, so a flag read during boot cannot lock in the
+  default, and a `Rails.cache` swapped in later is the one used.
 
 With `CRU_FLAGS_URL` unset the client is inert, the snapshot is empty, and
 every flag reads `false` — byte-for-byte ararat's current Memory-adapter
@@ -363,6 +394,68 @@ thawed deep copy so the public API stays ordinary Ruby.
 
 Consistency guarantee: a reader sees either the whole old document or the
 whole new one, never a half-applied update.
+
+### 6.1 Fallback copy
+
+The snapshot lives in process memory, so a process that boots while the flag
+service is down has nothing: every flag reads `false` until the service comes
+back. For a flag that is off everywhere that changes nothing. For a flag that
+is **on** in production (launched, not yet retired), the new process serves
+the old behaviour while every older process serves the new one, and users see
+the feature come and go between requests. Deploys start new processes, but
+so do autoscaling and crash or health-check restarts, which happen with or
+without a deploy.
+
+A client built with `fallback_store:` keeps a second copy of the last good
+document in a store shared across processes (in Rails, `Rails.cache`, so
+Redis in most of the fleet):
+
+- **Write**: after every successful tick (`200`, `304`, `404`), write the
+  current document as a JSON string under `cru_flags/v1/<url>`, with
+  `expires_in: nil`. The URL carries project and environment, so stage and
+  production never share a key even on a shared Redis. Rewriting on `304`
+  too means an evicted or flushed key comes back within one interval, and
+  the fleet converges on the newest document. A `404`'s empty document is
+  written like any other: "this project has no flags" is data (§4).
+- **Read**: only on a **failed** tick, and only while the process has no
+  document at all. A warm process keeps its own document even if another
+  process has since written a newer copy: the shared copy exists to cover a
+  process with nothing, and the warm one picks up any change on its next
+  successful tick. A found copy is
+  parsed with `Document.parse`, so it is validated and deep-frozen exactly
+  like a fetched one; anything else (a miss, a non-String, bad JSON, a
+  wrong-typed `Flags`) is ignored and the process stays at all-`false`.
+- The restored copy sets **no ETag**, so the first successful fetch after
+  recovery is a full `200` that replaces it. Health stays `failing`: the
+  fetch did fail, and §3.6 reports it as usual.
+- Both sides run inside `attempt_fetch`, under the fetch mutex, and both
+  swallow every exception; the health transition is reported before the
+  read, so a broken store can never silence an outage. In background mode
+  that is the poller thread, so a slow or dead store costs the poller time,
+  never a request. In on-demand mode (§7.1) the fetch already runs on the
+  reading thread, so once per interval a request also waits on one store
+  call, bounded by the store's own timeouts.
+- Stored as a JSON string, not a Hash, so no cache store ever Marshals a
+  frozen tree (the §4 default_proc trap cannot apply).
+
+The copy is only as durable as the store. `expires_in: nil` stops a TTL, not
+eviction: a full or LRU-evicting Redis can drop the key, and SolidCache
+removes rows by age (`max_age`, two weeks by default) and evicts oldest
+first, and its upsert does not refresh a row's age. While the service is up,
+the every-tick rewrite puts the copy back within one interval; during an
+outage nothing can. A per-container store (`FileStore`, `MemoryStore`) only
+helps a restart inside the same container. This assumes `CRU_FLAGS_URL` is
+unset during image builds (the fleet injects it at runtime), which leaves the
+client inert; a build that sets it and reads a flag would bake a copy into
+the image's `tmp/cache` under `FileStore`.
+
+Trade-off accepted: the copy is only as fresh as the last process that
+reached the service. That is the same promise a warm process makes during an
+outage (§4, point 3), extended to processes that start during one.
+
+The siblings have the same cold-start gap. Their runtimes (Lambda, Cloud
+Run) rarely have a shared cache next to them, so this ships Ruby-first, like
+§8's redirect and body-cap hardening.
 
 ---
 
@@ -464,6 +557,9 @@ One tick:
    the client would pin itself to the bad response via endless 304s.
 
 4. Report the health transition (§3.6), if any.
+5. With a `fallback_store` (§6.1): on an `ok` outcome, write the current
+   document to it; on a `failing` outcome while there is no snapshot yet,
+   publish the stored copy if it parses.
 
 Parsing is lenient exactly like the siblings, with the Node client's §6.1
 rules as the reference: missing/`null` `Flags` becomes `{}`, but `Flags`
@@ -500,6 +596,16 @@ Plus, ported from the siblings and ararat:
   returns.
 - On-demand mode: its own section (coalescing, one-fetch-per-interval while
   down, no thread).
+- Fallback copy (§6.1): saved with no expiry on every `ok` tick, keyed by
+  URL; restored only by a process with no document; garbage and a raising
+  store ignored; an `ActiveSupport::Cache::MemoryStore` with a default TTL
+  keeps the copy past it; a raising store read still reports the outage;
+  on-demand mode restores too; an assignment beats the default in either
+  order, even after the singleton exists; a Proc works through both
+  `Client.new` and the module setter; and four real Rails boots: zero-config
+  uses `Rails.cache`, `-> { Rails.cache }` set in app config resolves to it,
+  and a `nil` set in app config (before the Railtie) or in an initializer
+  (after it) wins.
 - `test/verify_live.rb`, opt-in and networked, against the real public
   endpoint (document parses; second conditional fetch is 304). Not in CI.
 

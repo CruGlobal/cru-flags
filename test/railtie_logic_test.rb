@@ -13,6 +13,7 @@ require "cru_flags"
 require "cru_flags/railtie"
 require "open3"
 require "rbconfig"
+require "tmpdir"
 
 class RailtieLogicTest < Minitest::Test
   def quiet?(current:, env_var: nil, rails_env: "development")
@@ -99,6 +100,56 @@ class RailtieLogicTest < Minitest::Test
     chain = boot_adapter_chain({})
     assert_includes chain, "CruFlags::FlipperAdapter"
     refute_includes chain, "Flipper::Adapters::Strict"
+  end
+
+  FALLBACK_BOOT_SCRIPT = <<~RUBY
+    require "bundler/setup"
+    require "logger"
+    require "rails"
+    require "cru_flags"
+
+    class FallbackBootApp < Rails::Application
+      config.eager_load = false
+      config.logger = Logger.new(File::NULL)
+      config.secret_key_base = "x" * 30
+      config.cache_store = :memory_store
+      config.paths["config/initializers"] = ENV["INITIALIZERS_DIR"] if ENV["INITIALIZERS_DIR"]
+      # Where config/application.rb and environment files run: before every
+      # Railtie initializer.
+      CruFlags.fallback_store = nil if ENV["OPT_OUT_IN_CONFIG"]
+      CruFlags.fallback_store = -> { Rails.cache } if ENV["PROC_IN_CONFIG"]
+    end
+
+    Rails.application.initialize!
+    puts CruFlags.fallback_store.equal?(Rails.cache) ? "rails_cache" : CruFlags.fallback_store.inspect
+  RUBY
+
+  def boot_fallback_store(extra_env = {})
+    lib_dir = File.expand_path("../lib", __dir__)
+    env = {"BUNDLE_GEMFILE" => File.expand_path("../Gemfile", __dir__)}.merge(extra_env)
+    stdout, stderr, status = Open3.capture3(env, RbConfig.ruby, "-I#{lib_dir}", "-e", FALLBACK_BOOT_SCRIPT)
+    assert status.success?, "subprocess boot failed:\n#{stderr}"
+    stdout.strip
+  end
+
+  def test_zero_config_boot_uses_rails_cache_as_the_fallback_store
+    assert_equal "rails_cache", boot_fallback_store
+  end
+
+  def test_opting_out_in_app_config_survives_the_railtie
+    assert_equal "nil", boot_fallback_store("OPT_OUT_IN_CONFIG" => "1")
+  end
+
+  # Rails.cache is still nil here, so only the Proc form can name it.
+  def test_a_proc_set_in_app_config_resolves_to_rails_cache
+    assert_equal "rails_cache", boot_fallback_store("PROC_IN_CONFIG" => "1")
+  end
+
+  def test_an_app_initializer_can_opt_out_of_the_fallback_store
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, "cru_flags.rb"), "CruFlags.fallback_store = nil\n")
+      assert_equal "nil", boot_fallback_store("INITIALIZERS_DIR" => dir)
+    end
   end
 
   def test_explicit_flipper_strict_env_var_is_honored_through_a_real_boot
