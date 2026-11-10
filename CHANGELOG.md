@@ -7,8 +7,6 @@
 
 * add the Go client ([#10](https://github.com/CruGlobal/cru-flags/issues/10)) ([67e98e3](https://github.com/CruGlobal/cru-flags/commit/67e98e34dd38dab2757b58cc8b9a98e4ef1de4c2))
 
-## Changelog
-
 ## Before 0.3.0
 
 Until 0.3.0 the clients lived in three repositories, each with its own
