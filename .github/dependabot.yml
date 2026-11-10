@@ -22,6 +22,16 @@ updates:
       npm-dependencies:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      # Held at 6.0.x, as bills does (BILLS-17). TypeScript 7 drops the
+      # compiler API that typescript-eslint (peer range: <6.1.0) and tsup's
+      # .d.ts build load, so `npm ci`, lint and build all fail on it. Minor is
+      # ignored too, so a 6.1 can never land in the grouped PR and redden it.
+      # Remove once typescript-eslint publishes a release that supports 7.
+      - dependency-name: "typescript"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
     commit-message:
       prefix: "chore"
       include: "scope"
