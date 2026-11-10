@@ -1,6 +1,6 @@
 /**
  * Timer behaviour: the poll interval's ±20% jitter and the hard requirement
- * that the client never keeps a process alive (`docs/design.md` §4.3, §4.4).
+ * that the client never keeps a process alive (`docs/node/design.md` §4.3, §4.4).
  */
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";

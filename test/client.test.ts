@@ -1,5 +1,5 @@
 /**
- * The behavioural contract from `docs/design.md` §2–§5, one test per line.
+ * The behavioural contract from `docs/node/design.md` §2–§5, one test per line.
  * Every test drives the client through a real socket (see helpers/server.ts).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -345,7 +345,7 @@ describe("bad responses", () => {
 
   it("does not store the ETag of a body it rejected", async () => {
     // Otherwise every later poll 304s and the client stays pinned forever to
-    // a response it refused to parse (`docs/design.md` §2.1).
+    // a response it refused to parse (`docs/node/design.md` §2.1).
     const client = makeClient({ pollSeconds: 0.05 });
     await client.ready();
     expect(client.enabled("alpha")).toBe(true);

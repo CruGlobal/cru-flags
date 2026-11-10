@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Every job runs on every change. A protocol change touches all four clients
+# by design, and path filters would let one land red in a language nobody
+# looked at.
+#
+# Every language's suite includes the shared conformance cases in
+# conformance/, served by conformance/server.py. That needs a `python3` on
+# PATH, which every ubuntu-latest runner has whatever toolchain a job adds.
+#
+# No job here touches the network beyond installing tools. The live checks
+# against deploys.cru.org stay opt-in (see CONTRIBUTING.md): a red build must
+# mean "our code is broken", never "the flag service was restarting".
+
+jobs:
+  node:
+    name: Node
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # .tool-versions is the one Node pin, read by asdf locally and here.
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .tool-versions
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  python:
+    name: Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # uv only reads .python-version, so the .tool-versions pin is extracted
+      # here rather than kept in a second file that could drift.
+      - name: Read Python version from .tool-versions
+        id: python-version
+        run: echo "version=$(awk '/^python /{print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+
+      # Exact tag: setup-uv publishes no floating major (there is no `v10`).
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: ${{ steps.python-version.outputs.version }}
+          activate-environment: true
+          enable-cache: true
+
+      - run: uv pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+      - run: pytest
+      # dist-python/, never dist/: that is the TypeScript build's directory.
+      - run: python -m build --outdir dist-python
+
+  # The package declares Python 3.11+, so prove it. Tests only: lint, format
+  # and typecheck do not depend on the interpreter and ran above.
+  python-versions:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: true
+          enable-cache: true
+      - run: uv pip install -e ".[dev]"
+      - run: pytest
+
+  ruby:
+    name: Ruby
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # No ruby-version: setup-ruby reads the pin from .tool-versions.
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      # standardrb, then the full suite.
+      - run: bundle exec rake
+
+  ruby-versions:
+    name: Ruby ${{ matrix.ruby }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ["3.2", "3.3", "3.4"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      - run: bundle exec rake test
+
+  # The one required status check in the repository ruleset. Adding, renaming
+  # or re-matrixing a job above only means updating `needs` here, never the
+  # ruleset in cru-terraform.
+  ci:
+    name: CI
+    if: ${{ always() }}
+    needs: [node, python, python-versions, ruby, ruby-versions]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every job passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              echo "::error::a CI job finished with '$result'"
+              exit 1
+            fi
+          done

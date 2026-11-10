@@ -1,6 +1,6 @@
 /**
  * `refreshMode: "on-demand"` — no timer, refresh on the request path
- * (`docs/design.md` §4.8). Real server, real timers throughout.
+ * (`docs/node/design.md` §4.8). Real server, real timers throughout.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CruFlags, REFRESH_MODE_ENV_VAR } from "../src/client.js";

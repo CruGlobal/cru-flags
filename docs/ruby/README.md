@@ -2,13 +2,12 @@
 
 > **Status: AI-generated, not actively maintained by a human team.** This
 > library was authored primarily by an AI assistant against the specification
-> in [docs/design.md](docs/design.md), reviewed and operated by the Cru Rails
+> in [design.md](design.md), reviewed and operated by the Cru Rails
 > team. Read the design doc before changing behavior — drift between the
 > design doc and the code is a bug, and the doc wins.
 
-The official Ruby client for Cru's pipeline feature-flag service, and the
-third sibling of [cru-flags-node](https://github.com/CruGlobal/cru-flags-node)
-and [cru-flags-python](https://github.com/CruGlobal/cru-flags-python) — plus a
+The official Ruby client for Cru's pipeline feature-flag service, one of the
+four clients in [CruGlobal/cru-flags](../../README.md) — plus a
 read-only Flipper adapter so the Rails fleet's existing `Flipper.enabled?`
 call sites work unchanged.
 
@@ -38,4 +37,4 @@ serves that copy instead of every flag off. To opt out, set
 `CruFlags.fallback_store = nil` anywhere in your app's config (application,
 environment file, or initializer).
 
-CRuby >= 3.2 only. See [docs/design.md](docs/design.md) for everything else.
+CRuby >= 3.2 only. See [design.md](design.md) for everything else.

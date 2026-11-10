@@ -7,9 +7,9 @@ name: dependabot-auto-merge
 #      always auto-merge, regardless of version-update type.
 #   2. Regular patch or minor version bumps — auto-merge too. The
 #      repo-level squash-merge requirement plus the ruleset's required
-#      status check (CI: `node (typecheck + lint + test + build)`) gate
-#      actual merging on green tests, so low-risk updates flow through
-#      without a human in the loop.
+#      status check (the `CI` gate job, which needs every language's jobs)
+#      gates actual merging on green tests, so low-risk updates flow
+#      through without a human in the loop.
 #
 # Major version bumps are explicitly left for human review — the
 # workflow never approves or enables auto-merge on them.

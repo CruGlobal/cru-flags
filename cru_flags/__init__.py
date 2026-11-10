@@ -18,7 +18,7 @@ background, starting on the first lookup rather than at import.
 Use :class:`Client` directly for tests, dependency injection, or to tune the
 poll interval and timeout. Runtimes that freeze between requests (Cloud Run,
 Lambda) can pass ``refresh_mode="on-demand"`` to drop the thread and refresh
-synchronously on the request path instead. See ``docs/design.md`` for the full
+synchronously on the request path instead. See ``docs/python/design.md`` for the full
 specification.
 """
 

@@ -1,10 +1,10 @@
-# cru-flags-ruby — Design Document
+# Ruby client (`cru-flags` gem) — Design Document
 
 > ADL-35. Drafted 2026-08-21 against cru-flags-python's docs/design.md (the
 > most complete sibling spec) and the recon in adl-35-cru-flags-ruby-recon.md.
-> When the CruGlobal/cru-flags-ruby repo is created this file moves in as
-> `docs/design.md` and inherits the siblings' rule: drift between the design
-> doc and the code is a bug, and the doc wins.
+> It now lives at `docs/ruby/design.md` in CruGlobal/cru-flags, beside the
+> other clients' design docs, and follows their rule: drift between the
+> design doc and the code is a bug, and the doc wins.
 
 ## 1. Purpose & Scope
 
@@ -620,11 +620,11 @@ re-running the suite on 3.2 / 3.3 / 3.4.
 ## 10. Packaging & distribution
 
 - Gem `cru-flags`, require path `cru_flags`, module `CruFlags`, repo
-  `CruGlobal/cru-flags-ruby`. Version lives in `lib/cru_flags/version.rb`,
-  bumped by release-please (`release-type: ruby` **with an explicit
-  `"version-file": "lib/cru_flags/version.rb"`** — release-please's default
-  path derivation turns the hyphenated name into `lib/cru/flags/version.rb`
-  and would silently bump a file that doesn't exist).
+  `CruGlobal/cru-flags` (shared with the Node, Python and Go clients). Version
+  lives in `lib/cru_flags/version.rb` and moves in lockstep with the other
+  three packages: release-please's root `node` release bumps it through an
+  `extra-files` entry that rewrites the line carrying the
+  `x-release-please-version` annotation.
 - `required_ruby_version = ">= 3.2"` — the fleet floor.
 - Runtime dependencies: **`flipper` (`~> 1.4`), plus a floor on the stdlib
   gem `json` (`>= 2.4`).** The client core uses stdlib exclusively; the

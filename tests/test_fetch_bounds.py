@@ -9,7 +9,7 @@ hops, and a slow-drip body, because the socket timeout restarts on each
 thread. The 1 MiB cap is the third bound, enforced *while* the body streams so
 that an oversized document never reaches the heap whole.
 
-These mirror cru-flags-ruby's fetcher tests (that client's PR #7). Each case
+These mirror the Ruby client's fetcher tests (CruGlobal/cru-flags-ruby#7). Each case
 drives exactly one synchronous tick via `refresh(force=True)`, so the elapsed
 time it asserts on is the fetch itself and nothing else.
 """

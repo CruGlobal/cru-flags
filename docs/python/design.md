@@ -362,7 +362,7 @@ One tick, bounded end to end by `fetch_timeout`:
    that overruns is a poller thread — or, in on-demand mode, a request
    thread — blocked for exactly that long.
 3. Redirects are followed **by this client, not by urllib**, to a fixed limit
-   of **3** (matching cru-flags-ruby, where `Net::HTTP` does not follow them
+   of **3** (matching the Ruby client, where `Net::HTTP` does not follow them
    at all). Not using the default opener is what makes that possible: with no
    `HTTPRedirectHandler` in it, a `3xx` arrives as an `HTTPError` exactly as
    a `404` already does, and the chain is walked under the tick's single
@@ -372,7 +372,7 @@ One tick, bounded end to end by `fetch_timeout`:
    too. The opener carries no file, ftp or data handler either, so there is
    nothing behind that check left to open.
 4. The body is read in `read1` chunks against a running byte count, capped at
-   **1 MiB** (`_MAX_BODY_BYTES`, matching cru-flags-ruby) and re-checked
+   **1 MiB** (`_MAX_BODY_BYTES`, matching the Ruby client) and re-checked
    against the deadline between chunks, so an oversized, endless or dripped
    body never reaches the heap whole. `read1` rather than `read`: `read`
    returns only once it holds the whole amount asked for, which leaves
@@ -400,7 +400,7 @@ calls `getaddrinfo` before any socket timeout applies, so a hung resolver
 blocks a tick for as long as the platform takes to give up. Bounding it means
 either a thread per fetch or a resolver dependency — the first is a lot of
 machinery to own for a failure mode the OS already times out, and the second
-is barred by §9's zero-dependency rule. cru-flags-ruby does not bound it
+is barred by §9's zero-dependency rule. The Ruby client does not bound it
 either. Everything *after* the name resolves is inside the deadline.
 
 The response body is read inside a `with` block so sockets are closed

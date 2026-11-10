@@ -1,0 +1,64 @@
+name: release-please
+
+# Keeps a standing "chore(main): release X.Y.Z" pull request on main, built
+# from Conventional Commit subjects. Merging it bumps every version file,
+# writes CHANGELOG.md, tags `vX.Y.Z` and publishes a GitHub Release, which is
+# what release.yml fires on.
+#
+# release-please-config.json cannot carry comments (release-please parses it
+# with plain JSON.parse), so its reasoning lives here:
+#
+#   One package, "." with release-type node, so every language shares one
+#   version. `node` only knows package.json and package-lock.json; the other
+#   version files move through `extra-files` in the same commit:
+#     - lib/cru_flags/version.rb uses the generic updater, which rewrites the
+#       line carrying an `x-release-please-version` comment.
+#     - pyproject.toml uses the TOML updater, so no annotation sits in a
+#       published manifest.
+#   The Python package reads its version from its own metadata.
+#   tests/test_versions.py fails the build the moment the files disagree.
+#
+#   include-component-in-tag: false
+#     Bare `vX.Y.Z` tags. Go requires it: `go get` resolves module versions
+#     from tags on the module root, and a prefixed tag is invisible to it.
+#
+#   bump-minor-pre-major: true, bump-patch-for-minor-pre-major: false
+#     Pre-1.0, a feature moves the minor and a breaking change is capped at
+#     the minor. Four ecosystems read this one number, so a feature should
+#     not land as a patch in three lockfiles.
+#
+#   bootstrap-sha
+#     The merge that finished moving the three clients in. Their own history
+#     (and their own feat/fix commits) sits behind it and must not be
+#     re-released as 0.3.0's changelog.
+#
+#   Changelog sections
+#     `chore` is hidden. Dependabot commits as `chore(deps)` (see
+#     dependabot.yml), because no package here has a runtime dependency
+#     Dependabot bumps, and a tooling bump must not cut a release of all
+#     four packages. A hand-written `deps:` commit is visible and does cut
+#     one: use it when a change reaches what consumers install.
+
+on:
+  push:
+    branches: [main]
+  # Manual run, for first-run bootstrap or after a config change.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      # CRU_DEVOPS_GITHUB_TOKEN, an org secret, rather than GITHUB_TOKEN: a
+      # pull request or release made with the default token triggers no
+      # workflows, so CI would never run on the release PR and release.yml
+      # would never fire.
+      - uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ secrets.CRU_DEVOPS_GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

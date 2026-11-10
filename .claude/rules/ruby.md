@@ -1,12 +1,26 @@
-# CLAUDE.md
+---
+paths:
+  - "lib/**"
+  - "test/**/*.rb"
+  - "cru-flags.gemspec"
+  - "Gemfile"
+  - "Rakefile"
+  - ".standard.yml"
+  - "docs/ruby/**"
+---
 
-`docs/design.md` is the authoritative specification for this library. Drift
+# Ruby client: `cru-flags` gem
+
+Read the root `CLAUDE.md` first; this file adds what is specific to the
+Ruby client.
+
+`docs/ruby/design.md` is the authoritative specification for this library. Drift
 between the design doc and the code is a bug, and the doc wins. Any PR that
-changes designed behavior MUST update `docs/design.md` in the same PR.
+changes designed behavior MUST update `docs/ruby/design.md` in the same PR.
 
-This gem is the third sibling of cru-flags-node and cru-flags-python. The
-three share one behavioral contract; before changing contract-level behavior
-here, check whether the siblings need the same change and say so in the PR.
+This gem is one of the four clients in this repository. They share one
+behavioral contract, encoded in `conformance/`; a contract-level change lands
+in all four clients in the same PR.
 
 Rules:
 - The client core stays stdlib-only. `flipper` is the only real runtime

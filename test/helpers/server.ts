@@ -5,7 +5,7 @@
  * stubbed `fetch`, because `ETag` revalidation, bodyless 304s and
  * `AbortController` timeouts are exactly the places where a hand-written
  * `fetch` double would encode our assumptions rather than test them
- * (`docs/design.md` §7).
+ * (`docs/node/design.md` §7).
  */
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { ServerResponse } from "node:http";
@@ -161,7 +161,7 @@ export function serveHang(): FlagHandler {
  * `status`, writing in small chunks and honouring backpressure. `writtenBytes`
  * reports how much actually made it onto the wire before the connection died
  * underneath the server — the only way to tell an aborted, streamed read from
- * one `fetch` buffered in full before objecting (`docs/design.md` §4.9).
+ * one `fetch` buffered in full before objecting (`docs/node/design.md` §4.9).
  */
 export function serveOversized(
   status: number,

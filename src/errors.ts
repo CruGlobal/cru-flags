@@ -3,7 +3,7 @@
  *
  * - `http` — the service answered with an unexpected status (5xx, 400, …).
  *   `status` carries it. Note that 404 is *not* an error (see
- *   `docs/design.md` §2.1) and 304 is a success.
+ *   `docs/node/design.md` §2.1) and 304 is a success.
  * - `network` — the request never completed: DNS, connection reset, TLS.
  * - `timeout` — `fetchTimeoutMs` elapsed and the request was aborted.
  * - `parse` — a 200 whose body was not a usable flag document.

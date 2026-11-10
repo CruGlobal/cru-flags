@@ -1,24 +1,34 @@
-# CLAUDE.md
+---
+paths:
+  - "cru_flags/**"
+  - "tests/**"
+  - "scripts/**"
+  - "pyproject.toml"
+  - "docs/python/**"
+---
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# Python client: `cru-flags`
 
-## What this project is
+Read the root `CLAUDE.md` first; this file adds what is specific to the
+Python client.
+
+## What this client is
 
 `cru-flags` — the official Python client for Cru's pipeline feature-flag
 service. It polls one public JSON document per (project, environment) in a
 background thread and answers `flags.enabled("some_flag")` from an in-memory
 snapshot. Read-only; flags are authored in the pipeline, not here.
 
-## docs/design.md is authoritative
+## docs/python/design.md is authoritative
 
-Read [`docs/design.md`](docs/design.md) before changing anything. It is the
+Read [`docs/python/design.md`](../../docs/python/design.md) before changing anything. It is the
 specification: the wire contract, the behavioural contract, and the rationale
 for the decisions that look surprising. Drift between the design doc and the
 code is a bug — if a change alters behaviour, update the doc in the same PR.
 
 ## Load-bearing design decisions
 
-Settled. Do not revisit these without updating `docs/design.md` first:
+Settled. Do not revisit these without updating `docs/python/design.md` first:
 
 - **Zero runtime dependencies.** `urllib.request`, `json`, `threading`,
   `logging` only. A dependency here is inherited by every application at Cru.
@@ -40,7 +50,7 @@ Settled. Do not revisit these without updating `docs/design.md` first:
   opened; the body is read in `read1` chunks under a 1 MiB cap. Do not
   reintroduce the default opener — it brings `HTTPRedirectHandler`, which
   re-arms the budget on every one of its ten hops, and file/ftp/data handlers
-  a redirect could reach. See `docs/design.md` §7, which also records the one
+  a redirect could reach. See `docs/python/design.md` §7, which also records the one
   known residual (DNS is not bounded).
 - **`404` is data, not an error.** It means "no document published yet" and
   yields an empty snapshot with no `on_error` call. `400` *is* an error (the
@@ -71,7 +81,7 @@ Settled. Do not revisit these without updating `docs/design.md` first:
 ## Toolchain
 
 - **Python 3.13.x** is the development interpreter, pinned in
-  [`.tool-versions`](.tool-versions) (asdf reads it locally; CI extracts the
+  [`.tool-versions`](../../.tool-versions) (asdf reads it locally; CI extracts the
   version from the same file, so local and CI cannot drift). The *shipped*
   library supports 3.11+, verified by a CI matrix.
 - [`uv`](https://docs.astral.sh/uv/) manages the virtualenv.
@@ -91,7 +101,7 @@ ruff check .            # lint
 ruff format --check .   # format check (drop --check to reformat)
 mypy                    # strict typecheck, config in pyproject.toml
 pytest                  # tests
-python -m build         # sdist + wheel into dist/
+python -m build --outdir dist-python   # sdist + wheel (dist/ is Node's)
 
 python scripts/verify_live.py   # opt-in, hits the real service (not in CI)
 ```
@@ -101,8 +111,8 @@ Run all five before opening a PR — CI runs exactly these.
 ## Conventions
 
 - **Failing test first** for bug fixes and features (see
-  [`CONTRIBUTING.md`](CONTRIBUTING.md)). Every line of the behavioural
-  contract in `docs/design.md` §3–§7 has a corresponding test.
+  [`CONTRIBUTING.md`](../../CONTRIBUTING.md)). Every line of the behavioural
+  contract in `docs/python/design.md` §3–§7 has a corresponding test.
 - Prefer the real local HTTP server fixture in `tests/conftest.py` over
   mocking `urlopen`. `urllib` raises `HTTPError` for `304`, and that is the
   sort of detail a mock gets wrong.

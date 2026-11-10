@@ -39,7 +39,7 @@ export interface FlagsDocument {
 
 /**
  * A health-state transition. Emitted at most once per transition — never once
- * per poll (see `docs/design.md` §5).
+ * per poll (see `docs/node/design.md` §5).
  */
 export type FlagsHealthEvent =
   | {
@@ -63,7 +63,7 @@ export type FlagsErrorHandler = (event: FlagsHealthEvent) => void;
  * - `"background"` (default) — an unref'd poll timer, every `pollSeconds`.
  * - `"on-demand"` — no timer. The refresh rides on whatever reads a flag, and
  *   only once the snapshot is `pollSeconds` old. For runtimes that freeze
- *   between requests (Cloud Run, Lambda). See `docs/design.md` §4.8.
+ *   between requests (Cloud Run, Lambda). See `docs/node/design.md` §4.8.
  */
 export type RefreshMode = "background" | "on-demand";
 

@@ -1,0 +1,70 @@
+version: 2
+
+# Minor and patch bumps are grouped into one weekly PR per ecosystem to keep
+# review cost flat; majors stay ungrouped so each gets its own PR and a real
+# migration check. dependabot-auto-merge.yml decides which merge unattended.
+#
+# Commit prefix `chore`, not `deps`: none of the four packages has a runtime
+# dependency Dependabot bumps here (npm, PyPI and Go are zero-dependency, and
+# the gem's flipper/json are ranges in the gemspec), so every one of these is
+# tooling. `chore` is hidden in release-please-config.json, so a tooling bump
+# does not cut a release of all four packages. If a bump does reach what
+# consumers install, retitle the PR `deps: ...` before merging to release it.
+
+updates:
+  # TypeScript: package.json + package-lock.json (dev dependencies only).
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      npm-dependencies:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Python: pyproject.toml's `dev` extra. There is no committed lockfile;
+  # Dependabot raises the floors.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      python-dependencies:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Ruby: the Gemfile's dev gems and the gemspec's ranges. Gemfile.lock is not
+  # committed, so this only fires when a range falls behind.
+  - package-ecosystem: "bundler"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      ruby-dependencies:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    groups:
+      github-actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "ci"
+      include: "scope"

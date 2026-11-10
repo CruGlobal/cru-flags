@@ -25,7 +25,7 @@ function deepFreeze<T>(value: T): T {
  * Pure and synchronous: text in, deep-frozen document out. Throws
  * {@link FlagsError} with `code: "parse"` on anything unusable, which the
  * client turns into an ordinary poll failure — so a bad deploy of the
- * *service* can never take down a client (`docs/design.md` §4.5).
+ * *service* can never take down a client (`docs/node/design.md` §4.5).
  *
  * Deliberately lenient about everything it does not interpret:
  *

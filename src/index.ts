@@ -9,7 +9,7 @@
  * flags.enabled("checkout_v2"); // boolean, sync, never throws
  * ```
  *
- * See `docs/design.md` for the wire contract and the reasoning behind the
+ * See `docs/node/design.md` for the wire contract and the reasoning behind the
  * behavioural guarantees (fail-static, transition-only logging, unref'd
  * timers).
  */

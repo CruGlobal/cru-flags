@@ -10,15 +10,15 @@ Gem::Specification.new do |spec|
   spec.summary = "Official Ruby client for Cru's pipeline feature-flag service"
   spec.description = "Polls the flag service's per-(project, environment) JSON document, " \
     "answers reads from a frozen in-memory snapshot with fail-static semantics, and ships " \
-    "a read-only Flipper adapter for the Rails fleet. CRuby only. See docs/design.md."
-  spec.homepage = "https://github.com/CruGlobal/cru-flags-ruby"
+    "a read-only Flipper adapter for the Rails fleet. CRuby only. See docs/ruby/design.md."
+  spec.homepage = "https://github.com/CruGlobal/cru-flags"
   spec.license = "BSD-3-Clause"
   spec.required_ruby_version = ">= 3.2"
   spec.metadata["rubygems_mfa_required"] = "true"
   spec.metadata["source_code_uri"] = spec.homepage
   spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
 
-  spec.files = Dir["lib/**/*.rb", "README.md", "LICENSE", "CHANGELOG.md", "docs/design.md"]
+  spec.files = Dir["lib/**/*.rb", "README.md", "LICENSE", "CHANGELOG.md", "docs/ruby/design.md"]
   spec.require_paths = ["lib"]
 
   # The ONE runtime dependency, and only for the adapter + Railtie (design doc §10).

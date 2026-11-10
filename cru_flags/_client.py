@@ -1,6 +1,6 @@
 """Polling feature-flag client.
 
-Implementation of the specification in ``docs/design.md``. Nothing in this
+Implementation of the specification in ``docs/python/design.md``. Nothing in this
 module is public API except what ``cru_flags/__init__.py`` re-exports.
 """
 
@@ -44,7 +44,7 @@ OnError: TypeAlias = Callable[[BaseException | None], None]
 
 Called with the offending exception when polling starts failing, and with
 ``None`` when polling recovers. Never called per-poll while a failure
-persists. See ``docs/design.md`` §3.7.
+persists. See ``docs/python/design.md`` §3.7.
 """
 
 RefreshMode: TypeAlias = Literal["background", "on-demand"]
@@ -52,7 +52,7 @@ RefreshMode: TypeAlias = Literal["background", "on-demand"]
 
 ``"background"`` (the default) polls on a daemon thread. ``"on-demand"``
 starts no thread and refreshes synchronously on the calling thread when the
-snapshot has aged past ``poll_seconds``. See ``docs/design.md`` §5.1.
+snapshot has aged past ``poll_seconds``. See ``docs/python/design.md`` §5.1.
 """
 
 _REFRESH_MODES: Final = frozenset(get_args(RefreshMode))
@@ -74,10 +74,10 @@ _HTTP_NOT_FOUND: Final = 404
 #: Statuses that name another URL to fetch the document from.
 _REDIRECT_STATUSES: Final = frozenset({301, 302, 303, 307, 308})
 
-#: Redirect hops followed within one tick, matching cru-flags-ruby.
+#: Redirect hops followed within one tick, matching the Ruby client.
 _MAX_REDIRECTS: Final = 3
 
-#: Hard cap on the flag document, matching cru-flags-ruby's MAX_BODY_BYTES.
+#: Hard cap on the flag document, matching the Ruby client's MAX_BODY_BYTES.
 #: The real document is a few kilobytes; a megabyte is already absurd.
 _MAX_BODY_BYTES: Final = 1_048_576
 
@@ -147,7 +147,7 @@ def _opener() -> urllib.request.OpenerDirector:
 
     Built on the first fetch rather than at import: constructing
     ``HTTPSHandler`` builds an SSL context and ``ProxyHandler`` reads the
-    environment, and import must do neither (``docs/design.md`` §5).
+    environment, and import must do neither (``docs/python/design.md`` §5).
     """
     opener = urllib.request.OpenerDirector()
     for handler in (
@@ -236,7 +236,7 @@ class Client:
     With ``refresh_mode="on-demand"`` there is no thread at all: the refresh
     happens on the reading thread, when the snapshot is older than
     ``poll_seconds`` — trading "never blocks" for correctness on scale-to-zero
-    runtimes. See ``docs/design.md`` §5.1.
+    runtimes. See ``docs/python/design.md`` §5.1.
     """
 
     def __init__(
@@ -254,7 +254,7 @@ class Client:
         by ±20% in background mode and used as a minimum snapshot age in
         on-demand mode. ``fetch_timeout`` is a wall-clock deadline for the
         whole refresh — redirect hops and the body read included, DNS
-        excepted (``docs/design.md`` §7) — and there are no retries within
+        excepted (``docs/python/design.md`` §7) — and there are no retries within
         one. ``on_error`` is called on
         health transitions only, and defaults to a warning on the
         ``cru_flags`` logger. ``refresh_mode`` selects background polling or
@@ -557,7 +557,7 @@ class Client:
         One ``fetch_timeout`` deadline covers the whole tick — every redirect
         hop and the body read — rather than restarting on each socket
         operation, so the bound the client promises its callers is the bound
-        they get. See ``docs/design.md`` §7.
+        they get. See ``docs/python/design.md`` §7.
         """
         headers = {"Accept": "application/json", "User-Agent": _USER_AGENT}
         if self._etag is not None:
@@ -586,7 +586,7 @@ class Client:
                     return  # unchanged: keep both the snapshot and the ETag
                 if status == _HTTP_NOT_FOUND:
                     # "No flag document published yet" — a valid answer, not a
-                    # failure. See docs/design.md §2.
+                    # failure. See docs/python/design.md §2.
                     self._publish(_EMPTY_SNAPSHOT, etag=None)
                     return
                 if status not in _REDIRECT_STATUSES:

@@ -3,7 +3,7 @@
  *
  * Opt-in only — run it with `npm run verify:live`. It is skipped unless
  * `CRU_FLAGS_LIVE` is set, and CI must never set it: a red build has to mean
- * "our code is broken", not "a service was restarting" (`docs/design.md` §7).
+ * "our code is broken", not "a service was restarting" (`docs/node/design.md` §7).
  *
  * The URL below is a public, read-only pilot document.
  */

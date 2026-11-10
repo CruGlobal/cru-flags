@@ -1,4 +1,4 @@
-# cru-flags-node — Design Document
+# Node client (`@cruglobal/flags`) — Design Document
 
 ## 1. Purpose & Scope
 
@@ -390,7 +390,7 @@ doesn't, on its own terms (§2.1) — the cap there only bounds how much a
 `SNIPPET_LIMIT`-sized excerpt can cost to produce, and never relabels the
 outcome. A `304` or `404` reads no body at all, so neither is affected.
 
-Mirrors the equivalent fix in `cru-flags-ruby` (`docs/design.md` §8): the same
+Mirrors the equivalent fix in the Ruby client (`docs/ruby/design.md` §8): the same
 1 MiB cap, the same 200-vs-everything-else failure split, and the same
 streamed-rather-than-buffered enforcement — the sibling clients share this
 part of the contract.

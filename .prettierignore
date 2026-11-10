@@ -2,3 +2,11 @@ dist/
 coverage/
 node_modules/
 package-lock.json
+CHANGELOG.md
+docs/*/CHANGELOG.md
+# The other languages' docs, formatted by hand like their code.
+docs/python/
+docs/ruby/
+docs/go/
+.venv/
+vendor/

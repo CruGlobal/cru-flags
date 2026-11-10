@@ -1,4 +1,4 @@
-"""The behavioural contract from docs/design.md, one test per line of it."""
+"""The behavioural contract from docs/python/design.md, one test per line of it."""
 
 from __future__ import annotations
 

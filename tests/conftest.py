@@ -4,7 +4,7 @@ A real server rather than a monkeypatched ``urlopen`` because the behaviour
 under test *is* HTTP behaviour: ``urllib`` surfaces ``304 Not Modified`` as a
 raised ``HTTPError``, echoes request headers with its own capitalisation, and
 closes bodies on its own schedule. A mock would encode our guesses about all
-three. See ``docs/design.md`` §8.
+three. See ``docs/python/design.md`` §8.
 """
 
 from __future__ import annotations

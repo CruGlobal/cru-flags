@@ -20,7 +20,7 @@ const DEFAULT_FETCH_TIMEOUT_MS = 2000;
 const DEFAULT_REFRESH_MODE: RefreshMode = "background";
 const REFRESH_MODES: readonly RefreshMode[] = ["background", "on-demand"];
 
-/** ±20% — see `docs/design.md` §4.3 (why jitter). */
+/** ±20% — see `docs/node/design.md` §4.3 (why jitter). */
 const JITTER = 0.2;
 
 /** Longest error-body excerpt carried into a `FlagsError` message. */
@@ -29,7 +29,7 @@ const SNIPPET_LIMIT = 200;
 /**
  * Cap on any response body read from the network — the document on a `200`,
  * and the excerpt read for a non-2xx status alike. Mirrors the cap
- * `cru-flags-ruby` enforces (`docs/design.md` §4.9): large enough for any
+ * the Ruby client enforces (`docs/node/design.md` §4.9): large enough for any
  * real flag document, small enough that a hostile or misconfigured endpoint
  * serving gigabytes cannot exhaust memory on a single poll tick. Exported so
  * tests don't hardcode a copy that can drift.
@@ -205,7 +205,7 @@ export class CruFlags {
   // ───────────────────────────────────────────────────────────────────────
 
   /**
-   * Lazy start (`docs/design.md` §4.1). Resolves the URL, fires the first
+   * Lazy start (`docs/node/design.md` §4.1). Resolves the URL, fires the first
    * fetch and arms the poll loop. Idempotent, synchronous, and never throws.
    */
   #start(): void {
@@ -482,7 +482,7 @@ function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
  * rather than buffered whole by `fetch`'s own `.text()` — the read stops,
  * and the underlying request is cancelled, the instant the cap is passed, so
  * a hostile or misconfigured endpoint serving gigabytes never reaches the
- * heap whole (`docs/design.md` §4.9). The `AbortController` deadline in
+ * heap whole (`docs/node/design.md` §4.9). The `AbortController` deadline in
  * `#fetchOnce` still bounds this: it's the same `fetch` call's stream, so a
  * slow trickle past the cap still can't outlast `fetchTimeoutMs`.
  *
@@ -513,7 +513,7 @@ async function readCappedBody(
       if (total > MAX_BODY_BYTES) return { text, truncated: true };
     }
   } finally {
-    // Mirrors cru-flags-ruby unwinding out of Net::HTTP.start on the same
+    // Mirrors the Ruby client unwinding out of Net::HTTP.start on the same
     // cap: tear the connection down rather than leave a cap-busting response
     // draining in the background.
     await reader.cancel().catch(() => undefined);

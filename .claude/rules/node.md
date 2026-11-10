@@ -1,8 +1,22 @@
-# CLAUDE.md
+---
+paths:
+  - "src/**"
+  - "test/**/*.ts"
+  - "package.json"
+  - "package-lock.json"
+  - "tsconfig.json"
+  - "tsup.config.ts"
+  - "vitest.config.ts"
+  - "eslint.config.js"
+  - "docs/node/**"
+---
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# Node client: `@cruglobal/flags`
 
-## What this project is
+Read the root `CLAUDE.md` first; this file adds what is specific to the
+TypeScript client.
+
+## What this client is
 
 `@cruglobal/flags` — the official Node.js client for Cru's **pipeline feature
 flag service**. It fetches one JSON document per (project, environment) over
@@ -16,17 +30,17 @@ flags.enabled("checkout_v2"); // boolean, sync, never throws
 
 ## Read the design doc first
 
-[`docs/design.md`](docs/design.md) is the **authoritative specification** —
+[`docs/node/design.md`](../../docs/node/design.md) is the **authoritative specification** —
 the wire contract, the behavioural contract, and the reasoning behind each
 decision. Read it before changing anything in `src/`.
 
-Design-level changes require updating `docs/design.md` **in the same PR**.
+Design-level changes require updating `docs/node/design.md` **in the same PR**.
 Drift between the design doc and the code is a bug, and the doc wins.
 
 ## Load-bearing decisions (do not "simplify" these)
 
 Each of these looks like it could be tidied up, and each one is load-bearing.
-The rationale is in `docs/design.md`; the short version:
+The rationale is in `docs/node/design.md`; the short version:
 
 - **`enabled()` never throws, and never blocks.** It is a hot-path predicate.
   Unknown flag, no document, malformed entry -> `false`. No coercion: the check
@@ -96,4 +110,4 @@ Before opening a PR run all four of typecheck, lint, test, build.
 - The live test is gated on `CRU_FLAGS_LIVE=1` and **must stay skipped in
   CI** — a red build should never mean "the flag service was restarting".
 - Bug fixes and features lead with a failing test; see
-  [`CONTRIBUTING.md`](CONTRIBUTING.md).
+  [`CONTRIBUTING.md`](../../CONTRIBUTING.md).

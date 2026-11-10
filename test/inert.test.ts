@@ -1,6 +1,6 @@
 /**
  * Unconfigured behaviour: with `CRU_FLAGS_URL` unset the client must be inert
- * *and silent* — no timers, no requests, no warnings (`docs/design.md` §4.2).
+ * *and silent* — no timers, no requests, no warnings (`docs/node/design.md` §4.2).
  *
  * This file owns the `flags` singleton assertions, so it must not set
  * `CRU_FLAGS_URL`; vitest isolates modules per file, so the singleton here is

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cru-flags"
-version = "0.1.3"
+version = "0.2.0"
 description = "Official Python client for Cru's pipeline feature-flag service."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -25,7 +25,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 # Zero runtime dependencies, deliberately and permanently: every
-# application at Cru inherits whatever we list here. See docs/design.md §9.
+# application at Cru inherits whatever we list here. See docs/python/design.md §9.
 dependencies = []
 
 [project.optional-dependencies]
@@ -39,22 +39,22 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/CruGlobal/cru-flags-python#readme"
-Repository = "https://github.com/CruGlobal/cru-flags-python"
-Issues = "https://github.com/CruGlobal/cru-flags-python/issues"
-Changelog = "https://github.com/CruGlobal/cru-flags-python/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/CruGlobal/cru-flags#readme"
+Repository = "https://github.com/CruGlobal/cru-flags"
+Issues = "https://github.com/CruGlobal/cru-flags/issues"
+Changelog = "https://github.com/CruGlobal/cru-flags/blob/main/CHANGELOG.md"
 
 # ───────────────────────────────────────────────────────────────────────────
 # Build: ship only the library plus the three metadata files. Tests,
-# scripts, docs, and CI config stay out of the sdist and wheel. (hatchling
-# also puts .gitignore in the sdist unconditionally; that is not
-# configurable and does no harm.)
+# scripts, docs, CI config and the other three languages' clients stay out
+# of the sdist and wheel. (hatchling also puts .gitignore in the sdist
+# unconditionally; that is not configurable and does no harm.)
 # ───────────────────────────────────────────────────────────────────────────
 [tool.hatch.build.targets.sdist]
-only-include = ["src", "README.md", "LICENSE", "CHANGELOG.md"]
+only-include = ["cru_flags", "README.md", "LICENSE", "CHANGELOG.md"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/cru_flags"]
+packages = ["cru_flags"]
 
 # ───────────────────────────────────────────────────────────────────────────
 # Lint + format
@@ -62,7 +62,7 @@ packages = ["src/cru_flags"]
 [tool.ruff]
 line-length = 88
 target-version = "py311"
-src = ["src", "tests"]
+src = [".", "tests"]
 
 [tool.ruff.lint]
 select = [
@@ -135,7 +135,7 @@ docstring-code-format = true
 # Types
 # ───────────────────────────────────────────────────────────────────────────
 [tool.mypy]
-files = ["src", "tests", "scripts"]
+files = ["cru_flags", "tests", "scripts"]
 python_version = "3.11"
 strict = true
 warn_unreachable = true

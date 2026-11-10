@@ -1,17 +1,17 @@
 # cru-flags
 
 [![PyPI](https://img.shields.io/pypi/v/cru-flags.svg)](https://pypi.org/project/cru-flags/)
-[![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
+[![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](../../LICENSE)
 
 > **Status: AI-generated, not actively maintained.** This library was
 > authored primarily by an AI assistant against the specification in
-> [`docs/design.md`](docs/design.md) and is not on anyone's active
+> [`docs/python/design.md`](design.md) and is not on anyone's active
 > roadmap. Dependabot keeps dependencies and security advisories up to
 > date automatically (patch + minor bumps auto-merge; majors require
 > manual review), but feature work, bug fixes, and other changes
 > happen on a best-effort basis. **Pull requests and issues are
 > welcome** — they may take time to be reviewed. See
-> [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution workflow.
+> [`CONTRIBUTING.md`](../../CONTRIBUTING.md) for the contribution workflow.
 
 The official Python client for Cru's pipeline feature-flag service. It reads
 one URL from the environment, polls it in the background, and answers flag
@@ -185,13 +185,13 @@ date, but never allowed to be slow, loud, or fatal. Precisely:
 
 Every row above is covered by a test. The reasoning behind the surprising
 ones — no TTL, `404`-is-data, transition-only logging — is in
-[`docs/design.md`](docs/design.md).
+[`docs/python/design.md`](design.md).
 
 ---
 
 ## Local development
 
-This repo pins the exact Python version in [`.tool-versions`](.tool-versions)
+This repo pins the exact Python version in [`.tool-versions`](../../.tool-versions)
 (read by [`asdf`](https://asdf-vm.com/) locally and by CI, so the two cannot
 drift) and uses [`uv`](https://docs.astral.sh/uv/) for the virtualenv:
 
@@ -205,7 +205,7 @@ source .venv/bin/activate
 ruff check . && ruff format --check .
 mypy
 pytest
-python -m build
+python -m build --outdir dist-python
 ```
 
 There is one networked check that CI deliberately does not run:
@@ -217,27 +217,18 @@ python scripts/verify_live.py
 It fetches the real public document for `ararat/release-candidate` and asserts
 that it parses and that a second conditional request returns `304`.
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and
-[`docs/design.md`](docs/design.md) for the design rationale.
+See [`CONTRIBUTING.md`](../../CONTRIBUTING.md) for the workflow and
+[`docs/python/design.md`](design.md) for the design rationale.
 
 ---
 
 ## Releasing
 
-Releases are automated. [release-please](https://github.com/googleapis/release-please)
-watches Conventional Commits on `main` and maintains a release PR; merging it
-tags the version, publishes a GitHub Release, and triggers
-`.github/workflows/release.yml`, which builds the sdist + wheel and uploads
-them to PyPI via **Trusted Publishing** (OIDC — there is no PyPI token in this
-repository).
-
-The very first publish works through PyPI's *pending publisher* mechanism: the
-`cru-flags` project does not exist on PyPI yet, so the pending publisher
-configured for this repository and the `pypi` environment creates it on the
-first successful upload. No manual `twine upload` is needed at any point.
+This package releases together with the other clients in the repository,
+under one version. See [Releasing](../../README.md#releasing).
 
 ---
 
 ## License
 
-[BSD-3-Clause](LICENSE).
+[BSD-3-Clause](../../LICENSE).

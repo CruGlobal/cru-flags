@@ -1,17 +1,17 @@
 # @cruglobal/flags
 
 [![npm](https://img.shields.io/npm/v/@cruglobal/flags.svg)](https://www.npmjs.com/package/@cruglobal/flags)
-[![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
+[![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](../../LICENSE)
 
 > **Status: AI-generated, not actively maintained.** This library was
 > authored primarily by an AI assistant against the specification in
-> [`docs/design.md`](docs/design.md) and is not on anyone's active
+> [`docs/node/design.md`](design.md) and is not on anyone's active
 > roadmap. Dependabot keeps dependencies and security advisories up to
 > date automatically (patch + minor bumps auto-merge; majors require
 > manual review), but feature work, bug fixes, and other changes
 > happen on a best-effort basis. **Pull requests and issues are
 > welcome** — they may take time to be reviewed. See
-> [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution workflow.
+> [`CONTRIBUTING.md`](../../CONTRIBUTING.md) for the contribution workflow.
 
 The official Node.js client for **Cru's pipeline feature flag service**. It
 polls one flag document over HTTP, caches it, and answers one question
@@ -181,14 +181,14 @@ are preserved verbatim so a newer service can add fields without breaking
 older clients.
 
 Full reasoning for each decision — including why there is no TTL and why
-logging is transition-only — is in [`docs/design.md`](docs/design.md).
+logging is transition-only — is in [`docs/node/design.md`](design.md).
 
 ---
 
 ## Development
 
 This repo uses [`asdf`](https://asdf-vm.com/) to pin the exact Node.js
-version (see [`.tool-versions`](.tool-versions)). After cloning:
+version (see [`.tool-versions`](../../.tool-versions)). After cloning:
 
 ```sh
 asdf plugin add nodejs   # one-time, if not already set up
@@ -212,24 +212,16 @@ read-only), asserts a real document parses and that the second poll
 revalidates to a `304`, and is deliberately **skipped in CI** so a service
 restart can never redden a build.
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full workflow and
-[`docs/design.md`](docs/design.md) for the design rationale.
+See [`CONTRIBUTING.md`](../../CONTRIBUTING.md) for the full workflow and
+[`docs/node/design.md`](design.md) for the design rationale.
 
 ### Releasing
 
-[release-please](https://github.com/googleapis/release-please) watches `main`,
-maintains a release PR from the conventional-commit history, and publishes a
-GitHub Release when that PR merges. The `release` workflow then runs
-`npm publish --provenance` using npm **trusted publishing** (OIDC) — there is
-no npm token in this repository.
-
-> Bootstrap note: npm trusted publishing can only be attached to a package
-> that already exists, so `v0.1.0` is published manually by a maintainer.
-> Once the trusted publisher is configured on the npm package, every
-> subsequent release publishes automatically from CI.
+This package releases together with the other clients in the repository,
+under one version. See [Releasing](../../README.md#releasing).
 
 ---
 
 ## License
 
-[BSD-3-Clause](LICENSE).
+[BSD-3-Clause](../../LICENSE).

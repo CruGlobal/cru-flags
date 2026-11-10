@@ -1,0 +1,38 @@
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# Node: dist/ is the tsup build, written by `npm run build`.
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Python: dev dependencies float within pyproject.toml's bounds, so uv.lock is
+# not committed. Builds go to dist-python/, never dist/, which is Node's: a
+# wheel left in dist/ would ride along in the next npm tarball.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+build/
+dist-python/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+uv.lock
+
+# Ruby: a gem does not commit its lockfile.
+Gemfile.lock
+.bundle/
+vendor/bundle/
+pkg/
+*.gem
+tmp/
+
+# Go
+/cover.out
