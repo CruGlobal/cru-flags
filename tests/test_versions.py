@@ -24,6 +24,8 @@ def _declared_versions() -> dict[str, str]:
         r'VERSION = "([^"]+)"', (ROOT / "lib/cru_flags/version.rb").read_text()
     )
     assert ruby is not None, "lib/cru_flags/version.rb has no VERSION"
+    go = re.search(r'const Version = "([^"]+)"', (ROOT / "version.go").read_text())
+    assert go is not None, "version.go has no Version"
     return {
         ".release-please-manifest.json": manifest["."],
         "package.json": package["version"],
@@ -31,6 +33,7 @@ def _declared_versions() -> dict[str, str]:
         'package-lock.json packages[""]': lock["packages"][""]["version"],
         "pyproject.toml": pyproject["project"]["version"],
         "lib/cru_flags/version.rb": ruby.group(1),
+        "version.go": go.group(1),
     }
 
 

@@ -1,0 +1,21 @@
+version: "2"
+
+linters:
+  # errcheck, govet, ineffassign, staticcheck, unused, plus:
+  default: standard
+  enable:
+    - bodyclose
+    - errorlint
+    - gocritic
+    - misspell
+    - nolintlint
+    - noctx
+    - revive
+    - unconvert
+    - unparam
+    - usestdlibvars
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

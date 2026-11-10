@@ -7,13 +7,14 @@ repository. Each one reads `CRU_FLAGS_URL`, polls that one JSON document with
 
 | Language   | Package                                                            | Install                                 | Read a flag                                |
 | ---------- | ------------------------------------------------------------------ | --------------------------------------- | ------------------------------------------ |
+| Go         | [`github.com/CruGlobal/cru-flags`][go-pkg]                         | `go get github.com/CruGlobal/cru-flags` | `cruflags.Enabled("checkout_v2")`          |
 | TypeScript | [`@cruglobal/flags`](https://www.npmjs.com/package/@cruglobal/flags) | `npm install @cruglobal/flags`          | `flags.enabled("checkout_v2")`             |
 | Python     | [`cru-flags`](https://pypi.org/project/cru-flags/)                 | `pip install cru-flags`                 | `flags.enabled("checkout_v2")`             |
 | Ruby       | [`cru-flags`](https://rubygems.org/gems/cru-flags)                 | `gem "cru-flags"`                       | `Flipper.enabled?(:checkout_v2)` (Rails)   |
 
-Every client has zero runtime dependencies (the gem's one exception is
-`flipper`, for its read-only Flipper adapter), and they share one version
-number and release together.
+All four have zero runtime dependencies (the gem's one exception is `flipper`,
+for its read-only Flipper adapter), share one version number, and release
+together.
 
 How flags are created and flipped (`cru app flags`), and how they fit the
 merge-dark / demo-on-stage / launch-in-production workflow, is in the
@@ -23,6 +24,8 @@ merge-dark / demo-on-stage / launch-in-production workflow, is in the
 > were authored primarily by an AI assistant against the design documents
 > linked below. Dependabot keeps tooling current; feature work and fixes
 > happen as needed. Issues and pull requests are welcome.
+
+[go-pkg]: https://pkg.go.dev/github.com/CruGlobal/cru-flags
 
 ## The contract every client keeps
 
@@ -46,6 +49,24 @@ The [conformance suite](conformance/) encodes these rules as cases, and every
 client's test suite runs them against the same test server.
 
 ## Quick start
+
+### Go
+
+```go
+import cruflags "github.com/CruGlobal/cru-flags"
+
+func main() {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	cruflags.Ready(ctx) // optional: wait for the first fetch before serving
+	cancel()
+
+	if cruflags.Enabled("checkout_v2") {
+		// ...
+	}
+}
+```
+
+Details: [docs/go/README.md](https://github.com/CruGlobal/cru-flags/blob/main/docs/go/README.md).
 
 ### TypeScript / Node.js
 
@@ -98,6 +119,7 @@ interval. Call `Ready` during init so the first invocation sees real flags.
 
 | Path                                                 | What                                                        |
 | ---------------------------------------------------- | ----------------------------------------------------------- |
+| `*.go`, `go.mod`                                     | Go package `cruflags`                                       |
 | `src/`, `test/*.ts`, `package.json`                  | TypeScript package `@cruglobal/flags`                       |
 | `cru_flags/`, `tests/`, `pyproject.toml`             | Python package `cru-flags`                                  |
 | `lib/`, `test/*.rb`, `cru-flags.gemspec`             | Ruby gem `cru-flags`                                        |
@@ -116,7 +138,7 @@ pull request open on `main`, built from Conventional Commit subjects. Merging
 it bumps every version file, writes `CHANGELOG.md`, tags `vX.Y.Z` and
 publishes a GitHub Release. The release workflow then publishes to npm, PyPI
 and RubyGems through trusted publishing (no registry tokens live in this
-repository).
+repository). The Go module needs no publish step: the tag is the release.
 
 ## License
 
