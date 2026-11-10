@@ -16,6 +16,19 @@ are hard to reproduce.
 The conformance suite runs in every language and needs a `python3` on `PATH`
 for its test server (any Python 3.11 or newer).
 
+### Go (`github.com/CruGlobal/cru-flags`)
+
+```sh
+asdf plugin add golang
+asdf plugin add golangci-lint
+asdf install
+
+go vet ./... && golangci-lint run ./... && go test -race ./...
+```
+
+The package takes no dependencies: CI fails if `go mod tidy` changes
+`go.mod`. It supports the Go release in `go.mod` and newer.
+
 ### TypeScript (`@cruglobal/flags`)
 
 ```sh
@@ -88,7 +101,8 @@ include the test.
 
 The test suites never reach the real flag service. Each client also has an
 opt-in check against `https://deploys.cru.org/flags/ararat/release-candidate`
-(public and read-only), which CI never runs:
+(public and read-only), which CI never runs. Go has none yet; its
+conformance cases cover the same wire behavior against a local server.
 
 ```sh
 npm run verify:live
@@ -101,7 +115,7 @@ CRU_FLAGS_URL=https://deploys.cru.org/flags/ararat/release-candidate ruby -Ilib 
 Nobody bumps versions by hand. release-please keeps a release PR open on
 `main`; merging it bumps every package to the same version, tags `vX.Y.Z` and
 publishes a GitHub Release, and `.github/workflows/release.yml` publishes to
-npm, PyPI and RubyGems. If one registry's publish fails, fix the cause and
+npm, PyPI and RubyGems. The tag is the Go release. If one registry's publish fails, fix the cause and
 re-run that workflow by hand with just that registry selected.
 
 ## License

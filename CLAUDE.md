@@ -13,6 +13,7 @@ contract, one CI and one version number.
 
 | Client                       | Source       | Tests                    | Design doc (authoritative) | Rules                    |
 | ---------------------------- | ------------ | ------------------------ | -------------------------- | ------------------------ |
+| Go, `cruflags`               | `*.go` (root) | `*_test.go`             | `docs/go/design.md`        | `.claude/rules/go.md`    |
 | TypeScript, `@cruglobal/flags` | `src/`       | `test/*.test.ts`         | `docs/node/design.md`      | `.claude/rules/node.md`  |
 | Python, `cru-flags`          | `cru_flags/` | `tests/`                 | `docs/python/design.md`    | `.claude/rules/python.md` |
 | Ruby, `cru-flags` gem        | `lib/`       | `test/*_test.rb`         | `docs/ruby/design.md`      | `.claude/rules/ruby.md`  |
@@ -34,7 +35,7 @@ described in the
   client. Drift between a design doc and its code is a bug, and the doc wins.
   A change to designed behavior updates the design doc in the same PR.
 - **No runtime dependencies.** Every app at Cru inherits what these packages
-  depend on. The gem's `flipper` (for its Flipper adapter) is the one
+  depend on. For Go, CI fails if `go mod tidy` changes `go.mod`. The gem's `flipper` (for its Flipper adapter) is the one
   exception, and its `json >= 2.4` floor must stay (see `.claude/rules/ruby.md`).
 
 ## Commits, versions and releases
@@ -48,7 +49,8 @@ described in the
   release PR moves them all. `tests/test_versions.py` fails the build if they
   disagree.
 - Merging the release PR tags `vX.Y.Z`; `release.yml` then publishes to npm,
-  PyPI and RubyGems through trusted publishing. Do not rename `release.yml`:
+  PyPI and RubyGems through trusted publishing. The tag itself is the Go
+  release: tags must stay bare `vX.Y.Z`, or `go get` cannot see them. Do not rename `release.yml`:
   each registry's trusted publisher names it.
 - Dependabot commits as `chore(deps)`, so tooling bumps release nothing.
   Retitle a Dependabot PR `deps: ...` only when it changes what consumers
@@ -62,6 +64,7 @@ plus a `python3` on `PATH` for the conformance server.
 
 | Client     | Set up                                                            | Check before a PR                                                                 |
 | ---------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Go         | nothing beyond `asdf install`                                     | `go vet ./... && golangci-lint run ./... && go test -race ./...`                  |
 | TypeScript | `npm install`                                                     | `npm run typecheck && npm run lint && npm test && npm run build`                  |
 | Python     | `uv venv && uv pip install -e ".[dev]" && source .venv/bin/activate` | `ruff check . && ruff format --check . && mypy && pytest`                       |
 | Ruby       | `bundle install`                                                  | `bundle exec rake` (standardrb, then the suite)                                   |
@@ -71,7 +74,10 @@ plus a `python3` on `PATH` for the conformance server.
 - `test/` holds two suites: TypeScript (`*.test.ts`, helpers in
   `test/helpers/`) and Ruby (`*_test.rb`, helpers in `test/support/`). Each
   runner globs only its own extension. Python's suite is `tests/`.
-- `src/` is TypeScript only. The Python package is `cru_flags/` at the root.
+- `src/` is TypeScript only. The Python package is `cru_flags/` at the root,
+  and the Go package is the root itself, so its import path is the module
+  path. Keep Go files at the root.
+- `go.mod` ignores `node_modules/`, so `./...` never walks npm's tree.
 - Python builds go to `dist-python/` (`python -m build --outdir dist-python`),
   never `dist/`, which is the TypeScript build: a wheel left in `dist/` would
   ship inside the next npm tarball.

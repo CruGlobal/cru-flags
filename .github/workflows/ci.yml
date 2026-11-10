@@ -112,13 +112,64 @@ jobs:
           bundler-cache: true
       - run: bundle exec rake test
 
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: .tool-versions
+          # No dependencies means no go.sum, so there is no module cache to
+          # restore, only a warning about one.
+          cache: false
+
+      # The package is standard library only, so any change here is a
+      # dependency creeping in, not churn. `git status`, not `git diff`:
+      # go.sum does not exist, and diff fails on a missing path.
+      - name: go mod tidy changes nothing
+        run: |
+          go mod tidy
+          if [ -n "$(git status --porcelain go.mod go.sum)" ]; then
+            git status --porcelain go.mod go.sum
+            echo "::error::go mod tidy changed go.mod or go.sum; this package takes no dependencies"
+            exit 1
+          fi
+
+      - run: go vet ./...
+
+      - name: Read golangci-lint version from .tool-versions
+        id: golangci-lint
+        run: echo "version=v$(awk '/^golangci-lint /{print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ steps.golangci-lint.outputs.version }}
+
+      - run: go test -race ./...
+
+  # go.mod's floor. The job above covers the .tool-versions release.
+  go-versions:
+    name: Go ${{ matrix.go }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ["1.25"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ matrix.go }}
+          cache: false
+      - run: go test -race ./...
+
   # The one required status check in the repository ruleset. Adding, renaming
   # or re-matrixing a job above only means updating `needs` here, never the
   # ruleset in cru-terraform.
   ci:
     name: CI
     if: ${{ always() }}
-    needs: [node, python, python-versions, ruby, ruby-versions]
+    needs: [node, python, python-versions, ruby, ruby-versions, go, go-versions]
     runs-on: ubuntu-latest
     steps:
       - name: Every job passed

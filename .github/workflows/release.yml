@@ -1,8 +1,9 @@
 name: release
 
 # Fires when a GitHub Release is published, which release-please does when its
-# release PR merges. Publishes the three registry packages; the Go module has
-# no registry, and the `vX.Y.Z` tag release-please pushed is its release.
+# release PR merges. Publishes the three registry packages. The Go module has
+# no registry: the `vX.Y.Z` tag release-please pushed is its release, and the
+# Go module proxy picks it up the first time anyone asks for it.
 #
 # Each registry gets its own job, so one misconfigured publisher cannot block
 # the other two. If one fails, fix the cause and re-run this workflow by hand

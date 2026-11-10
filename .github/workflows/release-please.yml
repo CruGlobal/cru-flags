@@ -11,8 +11,10 @@ name: release-please
 #   One package, "." with release-type node, so every language shares one
 #   version. `node` only knows package.json and package-lock.json; the other
 #   version files move through `extra-files` in the same commit:
-#     - lib/cru_flags/version.rb uses the generic updater, which rewrites the
-#       line carrying an `x-release-please-version` comment.
+#     - lib/cru_flags/version.rb and version.go use the generic updater, which
+#       rewrites the line carrying an `x-release-please-version` comment.
+#       The Go module's real version is the git tag; version.go only feeds
+#       its User-Agent.
 #     - pyproject.toml uses the TOML updater, so no annotation sits in a
 #       published manifest.
 #   The Python package reads its version from its own metadata.

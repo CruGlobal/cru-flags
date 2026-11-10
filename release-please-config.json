@@ -12,6 +12,7 @@
       "prerelease": false,
       "extra-files": [
         "lib/cru_flags/version.rb",
+        "version.go",
         {
           "type": "toml",
           "path": "pyproject.toml",

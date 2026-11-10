@@ -66,6 +66,21 @@ updates:
       prefix: "chore"
       include: "scope"
 
+  # Go: go.mod, which requires nothing today. Here so a dependency, if one is
+  # ever justified, is not forgotten.
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

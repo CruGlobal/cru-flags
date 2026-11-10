@@ -12,6 +12,7 @@ Each client runs every case from its own test suite:
 
 | Client     | Harness                                                   |
 | ---------- | --------------------------------------------------------- |
+| Go         | [`conformance_test.go`](../conformance_test.go)           |
 | TypeScript | [`test/conformance.test.ts`](../test/conformance.test.ts) |
 | Python     | [`tests/test_conformance.py`](../tests/test_conformance.py) |
 | Ruby       | [`test/conformance_test.rb`](../test/conformance_test.rb) |
