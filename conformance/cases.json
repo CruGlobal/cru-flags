@@ -1,0 +1,284 @@
+{
+  "documents": {
+    "v3": {
+      "Project": "conformance",
+      "Environment": "release-candidate",
+      "Version": 3,
+      "NotifySlack": false,
+      "Flags": {
+        "pilot_banner": {
+          "Enabled": true,
+          "Description": "On in v3",
+          "CreatedAt": "2026-07-31T14:09:01.119Z",
+          "UpdatedAt": "2026-07-31T14:09:08.777Z",
+          "UpdatedBy": "conformance"
+        },
+        "dark_feature": {
+          "Enabled": false,
+          "Description": "Off in v3",
+          "CreatedAt": "2026-07-31T14:09:01.119Z",
+          "UpdatedAt": "2026-07-31T14:09:01.119Z",
+          "UpdatedBy": "conformance"
+        }
+      }
+    },
+    "v4": {
+      "Project": "conformance",
+      "Environment": "release-candidate",
+      "Version": 4,
+      "NotifySlack": false,
+      "Flags": {
+        "pilot_banner": { "Enabled": false, "Description": "Off in v4" },
+        "dark_feature": { "Enabled": true, "Description": "On in v4" }
+      }
+    },
+    "loose": {
+      "Project": "conformance",
+      "Environment": "release-candidate",
+      "Version": 7,
+      "NotifySlack": false,
+      "Flags": {
+        "string_true": { "Enabled": "true" },
+        "one": { "Enabled": 1 },
+        "null_enabled": { "Enabled": null },
+        "missing_enabled": { "Description": "No Enabled key at all" },
+        "real": { "Enabled": true }
+      }
+    }
+  },
+  "cases": [
+    {
+      "name": "document",
+      "description": "A 200 with a document: each flag reads its Enabled value.",
+      "responses": [{ "status": 200, "etag": "\"3\"", "document": "v3" }],
+      "steps": [
+        {
+          "do": "ready",
+          "enabled": { "pilot_banner": true, "dark_feature": false },
+          "requests": 1,
+          "ifNoneMatch": null,
+          "events": []
+        }
+      ]
+    },
+    {
+      "name": "unknown-flag",
+      "description": "A flag the document does not name reads off. Names are case-sensitive.",
+      "responses": [{ "status": 200, "etag": "\"3\"", "document": "v3" }],
+      "steps": [
+        {
+          "do": "ready",
+          "enabled": { "not_a_flag": false, "PILOT_BANNER": false, "": false, "pilot_banner": true },
+          "events": []
+        }
+      ]
+    },
+    {
+      "name": "enabled-must-be-literal-true",
+      "description": "Only a JSON true turns a flag on. Nothing is coerced.",
+      "responses": [{ "status": 200, "etag": "\"7\"", "document": "loose" }],
+      "steps": [
+        {
+          "do": "ready",
+          "enabled": {
+            "string_true": false,
+            "one": false,
+            "null_enabled": false,
+            "missing_enabled": false,
+            "real": true
+          },
+          "events": []
+        }
+      ]
+    },
+    {
+      "name": "not-modified",
+      "description": "The next fetch sends If-None-Match with the stored ETag, and a 304 keeps the document.",
+      "responses": [
+        { "status": 200, "etag": "\"3\"", "document": "v3" },
+        { "status": 304 }
+      ],
+      "steps": [
+        { "do": "ready", "enabled": { "pilot_banner": true }, "requests": 1, "ifNoneMatch": null },
+        {
+          "do": "refresh",
+          "enabled": { "pilot_banner": true, "dark_feature": false },
+          "requests": 2,
+          "ifNoneMatch": "\"3\"",
+          "events": []
+        }
+      ]
+    },
+    {
+      "name": "changed-document",
+      "description": "A new 200 replaces the document and its ETag.",
+      "responses": [
+        { "status": 200, "etag": "\"3\"", "document": "v3" },
+        { "status": 200, "etag": "\"4\"", "document": "v4" },
+        { "status": 304 }
+      ],
+      "steps": [
+        { "do": "ready", "enabled": { "pilot_banner": true, "dark_feature": false } },
+        {
+          "do": "refresh",
+          "enabled": { "pilot_banner": false, "dark_feature": true },
+          "requests": 2,
+          "ifNoneMatch": "\"3\""
+        },
+        {
+          "do": "refresh",
+          "enabled": { "pilot_banner": false, "dark_feature": true },
+          "requests": 3,
+          "ifNoneMatch": "\"4\"",
+          "events": []
+        }
+      ]
+    },
+    {
+      "name": "server-error-keeps-last-known-good",
+      "description": "A 500 changes nothing: the last good document stands, and the failure is reported once.",
+      "responses": [
+        { "status": 200, "etag": "\"3\"", "document": "v3" },
+        { "status": 500, "body": "upstream exploded" }
+      ],
+      "steps": [
+        { "do": "ready", "enabled": { "pilot_banner": true }, "events": [] },
+        { "do": "refresh", "enabled": { "pilot_banner": true }, "events": ["failing"] },
+        {
+          "do": "refresh",
+          "enabled": { "pilot_banner": true, "dark_feature": false },
+          "requests": 3,
+          "ifNoneMatch": "\"3\"",
+          "events": ["failing"]
+        }
+      ]
+    },
+    {
+      "name": "server-error-before-any-document",
+      "description": "A 500 on the very first fetch leaves every flag off and is reported.",
+      "responses": [{ "status": 500, "body": "upstream exploded" }],
+      "steps": [
+        {
+          "do": "ready",
+          "enabled": { "pilot_banner": false, "dark_feature": false },
+          "requests": 1,
+          "events": ["failing"]
+        }
+      ]
+    },
+    {
+      "name": "recovers-after-failure",
+      "description": "The first success after a failure is reported as a recovery.",
+      "responses": [
+        { "status": 500, "body": "upstream exploded" },
+        { "status": 200, "etag": "\"3\"", "document": "v3" }
+      ],
+      "steps": [
+        { "do": "ready", "enabled": { "pilot_banner": false }, "events": ["failing"] },
+        { "do": "refresh", "enabled": { "pilot_banner": true }, "events": ["failing", "recovered"] }
+      ]
+    },
+    {
+      "name": "malformed-body-keeps-last-known-good",
+      "description": "A 200 whose body is not JSON is a failure. Its ETag is not stored, or every later poll would 304 onto a body the client rejected.",
+      "responses": [
+        { "status": 200, "etag": "\"3\"", "document": "v3" },
+        { "status": 200, "etag": "\"4\"", "body": "{\"Flags\": {\"pilot_banner\": " },
+        { "status": 304 }
+      ],
+      "steps": [
+        { "do": "ready", "enabled": { "pilot_banner": true } },
+        {
+          "do": "refresh",
+          "enabled": { "pilot_banner": true },
+          "requests": 2,
+          "ifNoneMatch": "\"3\"",
+          "events": ["failing"]
+        },
+        {
+          "do": "refresh",
+          "enabled": { "pilot_banner": true },
+          "requests": 3,
+          "ifNoneMatch": "\"3\"",
+          "events": ["failing", "recovered"]
+        }
+      ]
+    },
+    {
+      "name": "body-not-an-object",
+      "description": "Valid JSON that is not an object is not a document.",
+      "responses": [{ "status": 200, "etag": "\"5\"", "body": "[]" }],
+      "steps": [
+        { "do": "ready", "enabled": { "pilot_banner": false }, "events": ["failing"] }
+      ]
+    },
+    {
+      "name": "oversized-body",
+      "description": "A body over the 1 MiB cap is rejected, even when it is valid JSON, and the last good document stands.",
+      "responses": [
+        { "status": 200, "etag": "\"3\"", "document": "v3" },
+        { "status": 200, "etag": "\"9\"", "document": "v4", "padToBytes": 2097152 }
+      ],
+      "steps": [
+        { "do": "ready", "enabled": { "pilot_banner": true } },
+        {
+          "do": "refresh",
+          "enabled": { "pilot_banner": true, "dark_feature": false },
+          "events": ["failing"]
+        }
+      ]
+    },
+    {
+      "name": "timeout-keeps-last-known-good",
+      "description": "A fetch that outlives the client's fetch timeout is a failure; the last good document stands.",
+      "responses": [
+        { "status": 200, "etag": "\"3\"", "document": "v3" },
+        { "status": 200, "etag": "\"4\"", "document": "v4", "delayMs": 4000 }
+      ],
+      "steps": [
+        { "do": "ready", "enabled": { "pilot_banner": true } },
+        { "do": "refresh", "enabled": { "pilot_banner": true }, "events": ["failing"] }
+      ]
+    },
+    {
+      "name": "not-found-is-not-an-error",
+      "description": "A 404 means the app has no flag document yet: every flag is off, and nothing is reported.",
+      "responses": [
+        { "status": 404, "json": { "message": "conformance has no feature flags in release-candidate yet." } }
+      ],
+      "steps": [
+        { "do": "ready", "enabled": { "pilot_banner": false }, "requests": 1, "events": [] }
+      ]
+    },
+    {
+      "name": "not-found-drops-the-document",
+      "description": "A 404 after a document drops it and its ETag: a recreated document must not 304 against the old version.",
+      "responses": [
+        { "status": 200, "etag": "\"3\"", "document": "v3" },
+        { "status": 404, "json": { "message": "conformance has no feature flags in release-candidate yet." } },
+        { "status": 200, "etag": "\"3\"", "document": "v3" }
+      ],
+      "steps": [
+        { "do": "ready", "enabled": { "pilot_banner": true } },
+        { "do": "refresh", "enabled": { "pilot_banner": false }, "events": [] },
+        {
+          "do": "refresh",
+          "enabled": { "pilot_banner": true },
+          "requests": 3,
+          "ifNoneMatch": null,
+          "events": []
+        }
+      ]
+    },
+    {
+      "name": "no-url",
+      "description": "No CRU_FLAGS_URL: every flag is off, no request is made, nothing is reported.",
+      "url": false,
+      "responses": [],
+      "steps": [
+        { "do": "ready", "enabled": { "pilot_banner": false, "dark_feature": false }, "events": [] },
+        { "do": "refresh", "enabled": { "pilot_banner": false }, "events": [] }
+      ]
+    }
+  ]
+}

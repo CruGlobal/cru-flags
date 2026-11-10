@@ -135,7 +135,7 @@ docstring-code-format = true
 # Types
 # ───────────────────────────────────────────────────────────────────────────
 [tool.mypy]
-files = ["cru_flags", "tests", "scripts"]
+files = ["cru_flags", "tests", "scripts", "conformance"]
 python_version = "3.11"
 strict = true
 warn_unreachable = true
