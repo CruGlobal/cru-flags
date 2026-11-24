@@ -52,7 +52,7 @@ jobs:
         run: echo "version=$(awk '/^python /{print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
 
       # Exact tag: setup-uv publishes no floating major (there is no `v10`).
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           python-version: ${{ steps.python-version.outputs.version }}
           activate-environment: true
@@ -77,7 +77,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: true
