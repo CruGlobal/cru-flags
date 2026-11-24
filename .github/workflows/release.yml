@@ -82,7 +82,7 @@ jobs:
       - name: Read Python version from .tool-versions
         id: python-version
         run: echo "version=$(awk '/^python /{print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           python-version: ${{ steps.python-version.outputs.version }}
           activate-environment: true
